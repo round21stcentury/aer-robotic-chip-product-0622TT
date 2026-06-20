@@ -1,0 +1,274 @@
+--------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2021-2023 Ondrej Ille
+-- Copyright (C) 2023-     Logic Design Services Ltd.s
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to use, copy, modify, merge, publish, distribute the Component for
+-- non-commercial purposes. Using the Component for commercial purposes is
+-- forbidden unless previously agreed with Copyright holder.
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+-- -------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2015-2020 MIT License
+--
+-- Authors:
+--     Ondrej Ille <ondrej.ille@gmail.com>
+--     Martin Jerabek <martin.jerabek01@gmail.com>
+--
+-- Project advisors:
+-- 	Jiri Novak <jnovak@fel.cvut.cz>
+-- 	Pavel Pisa <pisa@cmp.felk.cvut.cz>
+--
+-- Department of Measurement         (http://meas.fel.cvut.cz/)
+-- Faculty of Electrical Engineering (http://www.fel.cvut.cz)
+-- Czech Technical University        (http://www.cvut.cz/)
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to deal in the Component without restriction, including without limitation
+-- the rights to use, copy, modify, merge, publish, distribute, sublicense,
+-- and/or sell copies of the Component, and to permit persons to whom the
+-- Component is furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- @TestInfoStart
+--
+-- @Purpose:
+--  RX Error logging feature test - Back to Back Error frames
+--
+-- @Verifies:
+--  @1. Multiple consecutive Error frames logged back-to-back.
+--
+-- @Test sequence:
+--  @1. Configure DUT to MODE[ERFM] = 1. Disable SSP in DUT. Configure
+--      fastest possible Nominal and Data Bit-rate for DUT and Test Node.
+--  @2. Generate CAN frame. Send it by DUT and wait until CRC field.
+--      Flip bus value to force bit error.
+--  @3. Wait until sample point and check DUT is transmitting Error frame.
+--  @4. Repeat waiting until sample point 16 times, and check that after
+--      each sample point DUTs RX Buffer contains one more Error frame.
+--      Check DUT becomes bus-off.
+--  @5. Read all 16 Error frames logged by DUT, and check that all of them have
+--      ERF_TYPE = ERC_BIT_ERR. Check that frames have ERF_ERP = 0, Check that
+--      timestamp of error frames are monotonically incrementing.
+--  @6. Wait for 16 x 8 bit times. Bus is still flipped so after each next 8
+--      frames, next Error frame is going to be started! Check that each
+--      time, a new error
+--
+-- @TestInfoEnd
+--------------------------------------------------------------------------------
+-- Revision History:
+--    5.8.2024   Created file
+--------------------------------------------------------------------------------
+
+Library ctu_can_fd_tb;
+context ctu_can_fd_tb.ieee_context;
+context ctu_can_fd_tb.rtl_context;
+context ctu_can_fd_tb.tb_common_context;
+
+use ctu_can_fd_tb.feature_test_agent_pkg.all;
+
+package rx_err_log_back_to_back_ftest is
+    procedure rx_err_log_back_to_back_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    );
+end package;
+
+
+package body rx_err_log_back_to_back_ftest is
+
+    procedure rx_err_log_back_to_back_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    ) is
+        variable mode_1             : t_ctu_mode := t_ctu_mode_rst_val;
+        variable ff             : t_ctu_frame_field;
+        variable frame_sent         : boolean;
+        variable tx_val             : std_logic;
+        variable status             : t_ctu_status;
+        variable rx_buf_state        : t_ctu_rx_buf_state;
+        variable can_frame          : t_ctu_frame;
+        variable err_frame          : t_ctu_frame;
+        variable err_frame_2        : t_ctu_frame;
+        variable rand_bits          : natural;
+        variable bit_timing         : t_ctu_bit_time_cfg;
+        variable ts_scratchpad      : std_logic_vector(63 downto 0);
+        variable hw_cfg             : t_ctu_hw_cfg;
+    begin
+
+        -- Read HW config
+        ctu_get_hw_config(hw_cfg, DUT_NODE, chn);
+        if (hw_cfg.rx_buffer_size < 64) then
+            info_m("Skipping the test since rx_buffer_size<64");
+            return;
+        end if;
+
+        -------------------------------------------------------------------------------------------
+        -- @1. Configure DUT to MODE[ERFM] = 1. Disable SSP in DUT. Configure
+        --     fastest possible Nominal and Data Bit-rate for DUT and Test Node.
+        -------------------------------------------------------------------------------------------
+        info_m("Step 1");
+
+        mode_1.error_logging := true;
+        ctu_set_mode(mode_1, DUT_NODE, chn);
+
+        bit_timing.tq_nbt     := 1;
+        bit_timing.tq_dbt     := 1;
+
+        bit_timing.prop_nbt   := 3;
+        bit_timing.ph1_nbt    := 3;
+        bit_timing.ph2_nbt    := 3;
+        bit_timing.sjw_nbt    := 1;
+
+        bit_timing.prop_dbt   := 0;
+        bit_timing.ph1_dbt    := 2;
+        bit_timing.ph2_dbt    := 2;
+        bit_timing.sjw_dbt    := 1;
+
+        ctu_turn(false, DUT_NODE, chn);
+        ctu_turn(false, TEST_NODE, chn);
+
+        ctu_set_bit_time_cfg(bit_timing, DUT_NODE, chn);
+        ctu_set_bit_time_cfg(bit_timing, TEST_NODE, chn);
+
+        ctu_set_ssp(ssp_no_ssp, x"00", DUT_NODE, chn);
+        ctu_set_ssp(ssp_no_ssp, x"00", TEST_NODE, chn);
+
+        ctu_turn(true, DUT_NODE, chn);
+        ctu_turn(true, TEST_NODE, chn);
+
+        ctu_wait_err_active(DUT_NODE, chn);
+        ctu_wait_err_active(TEST_NODE, chn);
+
+        set_transceiver_delay(1 ns, DUT_NODE, chn);
+        set_transceiver_delay(1 ns, TEST_NODE, chn);
+
+        -------------------------------------------------------------------------------------------
+        -- @2. Generate CAN frame. Send it by DUT and wait till CRC field.
+        --     Flip bus value to force bit error.
+        -------------------------------------------------------------------------------------------
+        info_m("Step 2");
+
+        generate_can_frame(can_frame);
+        can_frame.frame_format := FD_CAN;
+        can_frame.brs := BR_SHIFT;
+        ctu_send_frame(can_frame, 1, DUT_NODE, chn, frame_sent);
+
+        ctu_wait_ff(ff_crc, DUT_NODE, chn);
+        ctu_wait_sync_seg(DUT_NODE, chn);
+
+        flip_bus_level(chn);
+
+        -------------------------------------------------------------------------------------------
+        -- @3. Wait until sample point and check DUT is transmitting Error frame.
+        -------------------------------------------------------------------------------------------
+        info_m("Step 3");
+
+        ctu_wait_sample_point(DUT_NODE, chn, false);
+
+        wait for 20 ns;
+
+        ctu_get_status(status, DUT_NODE, chn);
+        check_m(status.error_transmission, "Error frame is being transmitted!");
+
+        -------------------------------------------------------------------------------------------
+        -- @4. Repeat waiting until sample point 32 times, and check that after
+        --     each sample point DUTs RX Buffer contains one more Error frame.
+        --     Check DUT becomes bus-off.
+        -------------------------------------------------------------------------------------------
+        info_m("Step 4");
+
+        for i in 1 to 16 loop
+            ctu_wait_sample_point(DUT_NODE, chn);
+
+            -- After first error frame there will be 1 error frame. When we wait right till
+            -- next sample point (first error in the Error frame), the DUT starts storing its
+            -- next error frame. At the same time readout RX Buffer status and check previous
+            -- state. This works since readout of RX status is shorter than storing of new
+            -- frame!
+
+            ctu_get_rx_buf_state(rx_buf_state, DUT_NODE, chn);
+            check_m(rx_buf_state.rx_frame_count = i,
+                    "Exptected frames in RX Buffer: " & integer'image(i) &
+                    " Real frames in RX Buffer: " & integer'image(rx_buf_state.rx_frame_count));
+        end loop;
+
+        release_bus_level(chn);
+        ctu_wait_bus_idle(DUT_NODE, chn);
+
+        -------------------------------------------------------------------------------------------
+        -- @5. Read all 16 Error frames logged by DUT, and check that all of them have
+        --     ERF_TYPE = ERC_BIT_ERR. Check that frames have ERF_ERP = 0.
+        --     Check that timestamp of error frames are monotonically incrementing.
+        -------------------------------------------------------------------------------------------
+        ts_scratchpad := (others => '0');
+
+        for i in 1 to 17 loop
+            info_m("Reading Error frame: " & integer'image(i));
+            ctu_read_frame(err_frame, DUT_NODE, chn);
+
+            check_m(err_frame.erf = '1',                    "FRAME_FORMAT_W[ERF] = 1");
+            check_m(err_frame.ivld = '1',                   "FRAME_FORMAT_W[IVLD] = 1");
+
+            if (i = 1) then
+                -- For CAN FD frame, a fixed stuff error shall be reported as Form Error by CAN standard!
+                check_m(err_frame.erf_type = ERC_FRM_ERR or
+                        err_frame.erf_type = ERC_BIT_ERR ,
+                        "FRAME_FORMAT_W[ERR_TYPE] = ERC_FRM_ERR or " &
+                        "FRAME_FORMAT_W[ERR_TYPE] = ERC_BIT_ERR");
+                check_m(err_frame.erf_pos = ERC_POS_CRC,    "FRAME_FORMAT_W[ERF_POS] = ERC_POS_CRC");
+            else
+                check_m(err_frame.erf_type = ERC_BIT_ERR,   "FRAME_FORMAT_W[ERR_TYPE] = ERC_BIT_ERR");
+                check_m(err_frame.erf_pos = ERC_POS_ERR,    "FRAME_FORMAT_W[ERF_POS] = ERC_POS_ERR");
+            end if;
+
+            if (i = 17) then
+                check_m(err_frame.erf_erp = '1', "FRAME_FORMAT_W[ERF_ERP] = 1");
+            else
+                check_m(err_frame.erf_erp = '0', "FRAME_FORMAT_W[ERF_ERP] = 0");
+            end if;
+
+            check_m(unsigned(err_frame.timestamp) > unsigned(ts_scratchpad),
+                    "Timestamp monotonically incrementing");
+
+            ts_scratchpad := err_frame.timestamp;
+        end loop;
+
+    end procedure;
+
+end package body;

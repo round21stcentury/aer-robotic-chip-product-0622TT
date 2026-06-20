@@ -1,0 +1,21 @@
+# run.sh 와 동일한 구성을 선언형으로. 취향에 따라 택1.
+#   사용:  docker compose build  &&  docker compose run --rm piper-hil
+services:
+  piper-hil:
+    build: .
+    image: piper-hil:humble
+    container_name: piper-hil
+    network_mode: host        # HIL UDP/SocketCAN을 호스트와 동일하게(NAT 없음)
+    ipc: host
+    stdin_open: true
+    tty: true
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ./ros2_ws:/root/ros2_ws:rw
+    devices:
+      - /dev/dri:/dev/dri      # iGPU 렌더(없으면 이 줄 삭제)
+      # - /dev/ttyUSB0:/dev/ttyUSB0   # USB-CAN/시리얼 쓸 때
+    command: bash

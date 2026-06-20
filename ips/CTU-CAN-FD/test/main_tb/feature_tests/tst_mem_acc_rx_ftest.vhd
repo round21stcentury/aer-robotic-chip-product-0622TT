@@ -1,0 +1,199 @@
+--------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2021-2023 Ondrej Ille
+-- Copyright (C) 2023-     Logic Design Services Ltd.s
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to use, copy, modify, merge, publish, distribute the Component for
+-- non-commercial purposes. Using the Component for commercial purposes is
+-- forbidden unless previously agreed with Copyright holder.
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+-- -------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2015-2020 MIT License
+--
+-- Authors:
+--     Ondrej Ille <ondrej.ille@gmail.com>
+--     Martin Jerabek <martin.jerabek01@gmail.com>
+--
+-- Project advisors:
+-- 	Jiri Novak <jnovak@fel.cvut.cz>
+-- 	Pavel Pisa <pisa@cmp.felk.cvut.cz>
+--
+-- Department of Measurement         (http://meas.fel.cvut.cz/)
+-- Faculty of Electrical Engineering (http://www.fel.cvut.cz)
+-- Czech Technical University        (http://www.cvut.cz/)
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to deal in the Component without restriction, including without limitation
+-- the rights to use, copy, modify, merge, publish, distribute, sublicense,
+-- and/or sell copies of the Component, and to permit persons to whom the
+-- Component is furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- @TestInfoStart
+--
+-- @Purpose:
+--  Test access to RX buffer RAM.
+--
+-- @Verifies:
+--  @1. RX buffer RAM can be written and read via Test registers.
+--
+-- @Test sequence:
+--  @1. Read size of RX buffer in DUT. Enable Test Mode and Test access in DUT.
+--      Disable DUT (since memory testability shall be used when DUT is disabled)
+--  @2. Iterate over march patterns 0xAAAA_AAAA and 0x5555_5555, C3C3_C3C3 and
+--      3C3C3C and random value
+--      @2.1 Write March content to whole RAM.
+--      @2.2 Read whole RX buffer RAM back and compare read values with written
+--           ones.
+--
+-- @TestInfoEnd
+--------------------------------------------------------------------------------
+-- Revision History:
+--    2.5.2021   Created file
+--------------------------------------------------------------------------------
+
+Library ctu_can_fd_tb;
+context ctu_can_fd_tb.ieee_context;
+context ctu_can_fd_tb.rtl_context;
+context ctu_can_fd_tb.tb_common_context;
+
+use ctu_can_fd_tb.feature_test_agent_pkg.all;
+use ctu_can_fd_tb.mem_bus_agent_pkg.all;
+
+package tst_mem_acc_rx_ftest is
+    procedure tst_mem_acc_rx_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    );
+end package;
+
+
+package body tst_mem_acc_rx_ftest is
+
+    procedure tst_mem_acc_rx_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    ) is
+        variable r_data  : std_logic_vector(31 downto 0) := (OTHERS => '0');
+        variable w_data  : std_logic_vector(31 downto 0) := (OTHERS => '0');
+
+        variable rx_info : t_ctu_rx_buf_state;
+
+        type t_test_values is
+            array (0 to 4) of std_logic_vector(31 downto 0);
+        variable patterns       : t_test_values := (
+            x"AAAAAAAA",
+            x"55555555",
+            x"C3C3C3C3",
+            x"3C3C3C3C",
+            x"00000000"          -- Random
+        );
+
+        type t_test_mem is
+            array (0 to 4095) of std_logic_vector(31 downto 0);
+        variable w_content : t_test_mem := (OTHERS => (OTHERS => '0'));
+        variable mode      : t_ctu_mode    := t_ctu_mode_rst_val;
+    begin
+
+        -----------------------------------------------------------------------
+        -- @1. Read size of RX buffer in DUT. Enable Test Mode and Test access
+        --     in DUT. Disable DUT (since memory testability shall be used
+        --     when DUT is disabled).
+        -----------------------------------------------------------------------
+        info_m("Step 1");
+        ctu_get_rx_buf_state(rx_info, DUT_NODE, chn);
+        mode.test := true;
+        ctu_set_mode(mode, DUT_NODE, chn);
+
+        -- First we must disable DUT
+        ctu_turn(false, DUT_NODE, chn);
+        ctu_set_tst_mem_access(true, DUT_NODE, chn);
+
+        info_m("Size of RX Buffer RAM: " & integer'image(rx_info.rx_mem_free));
+
+        ------------------------------------------------------------------------
+        -- @2. Iterate over march patterns 0xAAAA_AAAA and 0x5555_5555,
+        --     C3C3_C3C3 and 3C3C3C
+        ------------------------------------------------------------------------
+        for pattern_index in t_test_values'low to t_test_values'high loop
+
+            -----------------------------------------------------------------------
+            -- @2.1 Write March content to whole RAM.
+            -----------------------------------------------------------------------
+            info_m("Step 2.1");
+
+            -- Prepare the data
+            for i in 0 to rx_info.rx_mem_free - 1 loop
+                if (pattern_index = t_test_values'high) then
+                    rand_logic_vect_v(w_content(i), 0.5);
+                else
+                    w_content(i) := patterns(pattern_index);
+                end if;
+                wait for 1 ps; -- To avoid timeout due to max delta cycles
+            end loop;
+
+            -- Disable log reporting reduce log size for biggest RX buffer size.
+            mem_bus_agent_disable_transaction_reporting(chn);
+
+            -- Write the whole RAM
+            for i in 0 to rx_info.rx_mem_free - 1 loop
+                ctu_write_tst_mem(w_content(i), i, TST_TGT_RX_BUF, DUT_NODE, chn);
+            end loop;
+
+            -----------------------------------------------------------------------
+            -- @2.2 Read whole RX buffer RAM back and compare read values with
+            --      written ones.
+            -----------------------------------------------------------------------
+            info_m("Step 4");
+
+            for i in 0 to rx_info.rx_mem_free - 1 loop
+                ctu_read_tst_mem(r_data, i, TST_TGT_RX_BUF, DUT_NODE, chn);
+                check_m(r_data = w_content(i), "RX RAM data at address: " &
+                    integer'image(i) & " Expected: 0x" & to_hstring(w_content(i)) &
+                    " Read: 0x" & to_hstring(r_data));
+            end loop;
+
+            -- Enable reporting back again
+            mem_bus_agent_enable_transaction_reporting(chn);
+
+        end loop;
+
+  end procedure;
+
+end package body;

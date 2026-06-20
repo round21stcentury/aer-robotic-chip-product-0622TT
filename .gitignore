@@ -1,0 +1,77 @@
+# ═══════════════════════════════════════════════════════════
+# .gitignore — aer-robotic-chip-product-0622TT
+# ═══════════════════════════════════════════════════════════
+
+# ── 사용자 지정 제외 (업로드 안 함) ──
+/04_blog/
+/05_학습자료/
+/02_reflex_system_dev/
+
+# ── Claude Code 에디터 설정 (제품 소스 아님) ──
+/.claude/
+
+# ── 백업 tarball / 대용량 묶음 ──
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+
+# ── Vivado 합성 산출물 ──
+*.jou
+*.log
+.Xil/
+**/reflex_vivado/
+*.cache/
+*.runs/
+*.hw/
+*.sim/
+*.gen/
+*.ip_user_files/
+*.str
+vivado_*.backup.*
+*.dcp
+*.ltx
+
+# ── Vitis / 비트스트림 / ELF / 플랫폼(생성물) ──
+_vitis_ws/
+**/_vitis_ws/
+**/vitis_ws/
+**/*_vitis/
+**/sdt/
+*.xsa
+*.bit
+*.bif
+
+# ── xsim / 시뮬레이션 산출물 ──
+xsim.dir/
+**/xsim.dir/
+*.wdb
+*.pb
+xelab.*
+xvlog.*
+xsim.jou
+xsim*.log
+webtalk*.jou
+webtalk*.log
+xsimcrash.log
+
+# ── Python ──
+__pycache__/
+*.pyc
+*.pyo
+
+# ── ROS2 빌드 산출물 ──
+**/build/
+**/install/
+**/log/
+**/.ros/
+
+# ── OS / 에디터 ──
+.DS_Store
+*.swp
+*~
+
+# ── 개인 메모 (업로드 안 함) ──
+/dkdl.md
+/메모장.md
+/궁금증.md

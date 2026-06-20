@@ -1,0 +1,237 @@
+--------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2021-2023 Ondrej Ille
+-- Copyright (C) 2023-     Logic Design Services Ltd.s
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to use, copy, modify, merge, publish, distribute the Component for
+-- non-commercial purposes. Using the Component for commercial purposes is
+-- forbidden unless previously agreed with Copyright holder.
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+-- -------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2015-2020 MIT License
+--
+-- Authors:
+--     Ondrej Ille <ondrej.ille@gmail.com>
+--     Martin Jerabek <martin.jerabek01@gmail.com>
+--
+-- Project advisors:
+-- 	Jiri Novak <jnovak@fel.cvut.cz>
+-- 	Pavel Pisa <pisa@cmp.felk.cvut.cz>
+--
+-- Department of Measurement         (http://meas.fel.cvut.cz/)
+-- Faculty of Electrical Engineering (http://www.fel.cvut.cz)
+-- Czech Technical University        (http://www.cvut.cz/)
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to deal in the Component without restriction, including without limitation
+-- the rights to use, copy, modify, merge, publish, distribute, sublicense,
+-- and/or sell copies of the Component, and to permit persons to whom the
+-- Component is furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- @TestInfoStart
+--
+-- @Purpose:
+--  One shot mode feature test (Retransmitt limit = 0).
+--
+-- @Verifies:
+--  @1. One shot mode - Retransmitt limit enabled and set to 0. Verifies there is
+--      only one atempt to transmitt a frame in one shot mode
+--  @2. When One shot mode is not set (retransmit limit = 0, but disabled),
+--      core does not stop re-transmitting after retransmitt limit number of
+--      retransmissions was reached (retransmitts indefinitely).
+--  @3. When transmission fails as result of Error frame, device in One shot mode
+--      does not transmitt anymore!
+--  @4. When transmission fails as result of Arbitration loss, device in One shot
+--      mode does not transmitt anymore!
+--
+-- @Test sequence:
+--  @1. Set retransmitt limit to 0 in DUT. Enable retransmitt limitations.
+--      Set Acknowledge forbidden mode in Test node (to produce ACK errors). Turn
+--      on Test mode in DUT (to manipulate error counters).
+--  @2. Generate frame and start sending the frame by DUT. Wait until
+--      error frame occurs and transmission is over.
+--  @3. Check transmission failed and transmitting TXT Buffer is "TX Error".
+--  @4. Disable retransmitt limitions in DUT. Start sending a frame by DUT.
+--      Wait until error frame and check that transmitting TXT Buffer is "Ready"
+--      again (hitting current retransmitt limit did not cause stopping
+--      retransmissions when retransmitt limit is disabled).
+--  @5. Abort transmission by DUT. Wait until transmission was aborted.
+--  @6. Insert frames for transmission to DUT and Test node simultaneously
+--      to invoke arbitration. ID of frame in DUT is higher than the one in
+--      Test node (to loose arbitration). Wait until node 1 is in Control field of
+--      a frame. Check that DUT is receiver (arbitration was really lost) and
+--      TXT Buffer in DUT ended up in "TX Error" state.
+--
+-- @TestInfoEnd
+--------------------------------------------------------------------------------
+-- Revision History:
+--    06.7.2019   Created file
+--------------------------------------------------------------------------------
+
+Library ctu_can_fd_tb;
+context ctu_can_fd_tb.ieee_context;
+context ctu_can_fd_tb.rtl_context;
+context ctu_can_fd_tb.tb_common_context;
+
+use ctu_can_fd_tb.feature_test_agent_pkg.all;
+
+package one_shot_ftest is
+    procedure one_shot_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    );
+end package;
+
+
+package body one_shot_ftest is
+    procedure one_shot_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    ) is
+        variable can_frame          :       t_ctu_frame;
+        variable frame_sent         :       boolean := false;
+        variable mode_1             :       t_ctu_mode := t_ctu_mode_rst_val;
+        variable mode_2             :       t_ctu_mode := t_ctu_mode_rst_val;
+        variable buf_state          :       t_ctu_txt_buff_state;
+        variable status             :       t_ctu_status;
+    begin
+
+        ------------------------------------------------------------------------
+        -- @1. Set retransmitt limit to 0 in DUT. Enable retransmitt 
+        --     limitations. Set Acknowledge forbidden mode in Test node (to 
+        --     produce ACK errors). Turn on Test mode in DUT (to manipulate  
+        --     error counters).
+        ------------------------------------------------------------------------
+        info_m("Step 1: Configuring One shot Mode (DUT), ACF (Test node)");
+        
+        ctu_set_retr_limit(true, 0, DUT_NODE, chn);
+        
+        mode_2.acknowledge_forbidden := true;
+        ctu_set_mode(mode_2, TEST_NODE, chn);
+        
+        mode_1.test := true;
+        ctu_set_mode(mode_1, DUT_NODE, chn);
+        
+        ------------------------------------------------------------------------
+        -- @2. Generate frame and start sending the frame by DUT. Wait until
+        --     error frame occurs and transmission is over.
+        ------------------------------------------------------------------------
+        info_m("Step 2: Sending frame by DUT");
+        
+        generate_can_frame(can_frame);
+        can_frame.rtr := RTR_FRAME; -- Use RTR frame to save simulation time
+        can_frame.frame_format := NORMAL_CAN;
+        
+        ctu_send_frame(can_frame, 1, DUT_NODE, chn, frame_sent);
+        ctu_wait_err_frame(DUT_NODE, chn);
+        
+        ctu_wait_bus_idle(DUT_NODE, chn);
+
+        ------------------------------------------------------------------------
+        -- @3. Check transmission failed and transmitting TXT Buffer is
+        --     "TX Error".
+        ------------------------------------------------------------------------
+        info_m("Step 3: Checking transmission failed.");
+        
+        ctu_get_txt_buf_state(1, buf_state, DUT_NODE, chn);
+        check_m(buf_state = buf_failed, "TXT Buffer failed!");
+        
+        ------------------------------------------------------------------------
+        -- @4. Disable retransmitt limitions in DUT. Start sending a frame by
+        --     DUT. Wait until error frame and check that transmitting TXT
+        --     Buffer is "Ready" again (hitting current retransmitt limit did not
+        --     cause stopping retransmissions when retransmitt limit is disabled).
+        ------------------------------------------------------------------------
+        info_m("Step 4: Testing disabled One shot mode");
+        
+        ctu_set_retr_limit(false, 0, DUT_NODE, chn);
+        ctu_send_frame(can_frame, 1, DUT_NODE, chn, frame_sent);
+        ctu_wait_err_frame(DUT_NODE, chn);
+        
+        ctu_get_txt_buf_state(1, buf_state, DUT_NODE, chn);
+        check_m(buf_state = buf_ready, "TXT Buffer ready!");
+        
+        ------------------------------------------------------------------------
+        -- @5. Abort transmission by DUT. Wait until transmission was aborted.
+        ------------------------------------------------------------------------
+        info_m("Step 5: Aborting transmission");
+        
+        ctu_give_txt_cmd(buf_set_abort, 1, DUT_NODE, chn);
+        ctu_get_txt_buf_state(1, buf_state, DUT_NODE, chn);
+        while (buf_state /= buf_aborted) loop
+            ctu_get_txt_buf_state(1, buf_state, DUT_NODE, chn);
+        end loop;        
+        ctu_wait_bus_idle(DUT_NODE, chn);
+
+        ------------------------------------------------------------------------
+        -- @6. Insert frames for transmission to DUT and Test node simultaneously
+        --     to invoke arbitration. ID of frame in DUT is higher than the
+        --     one in Test node (to loose arbitration). Wait until node 1 is in 
+        --     Control field of a frame. Check that DUT is receiver 
+        --     (arbitration was really lost) and TXT Buffer in DUT ended up
+        --     in "TX Error" state.
+        ------------------------------------------------------------------------
+        info_m("Step 6: Testing One shot due to arbitration loss!");
+        
+        ctu_set_retr_limit(true, 0, DUT_NODE, chn);
+        
+        can_frame.ident_type := BASE;
+        can_frame.identifier := 10;
+        ctu_put_tx_frame(can_frame, 1, DUT_NODE, chn);
+        
+        can_frame.identifier := 9;
+        ctu_put_tx_frame(can_frame, 1, TEST_NODE, chn);
+        
+        -- TODO: Use atomic procedure after priority test is merged to be sure!
+        ctu_give_txt_cmd(buf_set_ready, 1, DUT_NODE, chn);
+        ctu_give_txt_cmd(buf_set_ready, 1, TEST_NODE, chn);
+        
+        ctu_wait_ff(ff_control, DUT_NODE, chn);
+        
+        ctu_get_status(status, DUT_NODE, chn);
+        check_m(status.receiver, "DUT lost arbitration");
+        
+        ctu_get_txt_buf_state(1, buf_state, DUT_NODE, chn);
+        check_m(buf_state = buf_failed, "TXT Buffer failed");
+        ctu_wait_bus_idle(DUT_NODE, chn);
+        
+  end procedure;
+
+end package body;

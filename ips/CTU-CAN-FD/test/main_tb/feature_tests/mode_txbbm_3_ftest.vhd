@@ -1,0 +1,285 @@
+--------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2021-2023 Ondrej Ille
+-- Copyright (C) 2023-     Logic Design Services Ltd.s
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to use, copy, modify, merge, publish, distribute the Component for
+-- non-commercial purposes. Using the Component for commercial purposes is
+-- forbidden unless previously agreed with Copyright holder.
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+-- -------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2015-2020 MIT License
+--
+-- Authors:
+--     Ondrej Ille <ondrej.ille@gmail.com>
+--     Martin Jerabek <martin.jerabek01@gmail.com>
+--
+-- Project advisors:
+-- 	Jiri Novak <jnovak@fel.cvut.cz>
+-- 	Pavel Pisa <pisa@cmp.felk.cvut.cz>
+--
+-- Department of Measurement         (http://meas.fel.cvut.cz/)
+-- Faculty of Electrical Engineering (http://www.fel.cvut.cz)
+-- Czech Technical University        (http://www.cvut.cz/)
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to deal in the Component without restriction, including without limitation
+-- the rights to use, copy, modify, merge, publish, distribute, sublicense,
+-- and/or sell copies of the Component, and to permit persons to whom the
+-- Component is furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- @TestInfoStart
+--
+-- @Purpose:
+--  TXT Buffer backup mode 3 feature test.
+--
+-- @Verifies:
+--  @1. When MODE[TBBM] = 1, and parity error occurs during TXT Buffer validation
+--      of "original" TXT Buffer, "backup" buffer is used for transmission.
+--
+-- @Test sequence:
+--  @1. Set TXT Buffer backup mode and Test mode in DUT.
+--  @2. Loop 5 times:
+--      @2.1 Generate random priorities of TXT Buffers and apply them in DUT.
+--           Generate random index of TXT Buffer which is for sure "original"
+--           TXT Buffer and insert random frame to it.
+--      @2.2 Enable test access to buffer RAMs. Generate random word index
+--           (within first 4 words of TXT Buffer), and flip such bit.
+--           Disable test access.
+--      @2.3 Send set ready command to selected original TXT Buffer. Wait until
+--           DUT starts transmission, and check that "original" TXT Buffer is in
+--           "Parity error" and "backup" TXT Buffer is in "TX in progress" state.
+--           Check that STATUS[TXPE] is set in DUT.
+--      @2.4 Wait until transmission ends and bus is idle. Check that "original"
+--           TXT Buffer is in "Parity Error" state and "backup" TXT buffer ended in
+--           "TX OK" state. Issue Set Empty to original TXT Buffer, and check
+--           it moves to Empty!
+--
+-- @TestInfoEnd
+--------------------------------------------------------------------------------
+-- Revision History:
+--    30.06.2022   Created file
+--------------------------------------------------------------------------------
+
+Library ctu_can_fd_tb;
+context ctu_can_fd_tb.ieee_context;
+context ctu_can_fd_tb.rtl_context;
+context ctu_can_fd_tb.tb_common_context;
+
+use ctu_can_fd_tb.feature_test_agent_pkg.all;
+
+package mode_txbbm_3_ftest is
+    procedure mode_txbbm_3_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    );
+end package;
+
+
+package body mode_txbbm_3_ftest is
+    procedure mode_txbbm_3_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    ) is
+        variable can_tx_frame       :       t_ctu_frame;
+        variable can_rx_frame       :       t_ctu_frame;
+        variable frame_sent         :       boolean := false;
+        variable frames_equal       :       boolean := false;
+        variable mode_1             :       t_ctu_mode := t_ctu_mode_rst_val;
+        variable mode_2             :       t_ctu_mode := t_ctu_mode_rst_val;
+
+        variable command_1          :     t_ctu_command := t_ctu_command_rst_val;
+
+        variable err_counters       :       t_ctu_err_ctrs := (0, 0, 0, 0);
+        variable err_counters_2     :       t_ctu_err_ctrs := (0, 0, 0, 0);
+
+        variable fault_th           :       t_ctu_fault_thresholds;
+        variable fault_th_2         :       t_ctu_fault_thresholds;
+
+        variable txt_buf_count      :       natural;
+        variable tmp_int            :       natural;
+        variable txt_buf_index      :       natural;
+
+        variable txt_buf_vector     :       std_logic_vector(7 downto 0) := x"00";
+        variable txt_buf_state      :       t_ctu_txt_buff_state;
+        variable tst_mem            :       t_tgt_test_mem;
+
+        variable corrupt_wrd_index  :       natural;
+        variable corrupt_bit_index  :       natural;
+
+        variable r_data             :       std_logic_vector(31 downto 0);
+        variable status_1           :       t_ctu_status;
+
+        variable hw_cfg             :       t_ctu_hw_cfg;
+    begin
+
+        -----------------------------------------------------------------------
+        -- @1. Set TXT Buffer backup mode and Test mode in DUT.
+        -----------------------------------------------------------------------
+        info_m("Step 1");
+
+        mode_1.tx_buf_backup := true;
+        mode_1.parity_check := true;
+        mode_1.test := true;
+        ctu_set_mode(mode_1, DUT_NODE, chn);
+
+        ctu_get_txt_buf_cnt(txt_buf_count, DUT_NODE, chn);
+
+        ctu_get_hw_config(hw_cfg, DUT_NODE, chn);
+        if (hw_cfg.sup_parity = false) then
+            info_m("Skipping the test since sup_parity = false -> Can't invoke Parity Error");
+            return;
+        end if;
+
+        -----------------------------------------------------------------------
+        -- @2. Loop 5 times:
+        -----------------------------------------------------------------------
+        for iteration in 1 to 5 loop
+            info_m("Step 2, iteration" & integer'image(iteration));
+
+            -------------------------------------------------------------------
+            -- @2.1 Generate random priorities of TXT Buffers and apply
+            --      them in DUT. Generate random index of TXT Buffer which is
+            --      for sure "original" TXT Buffer and insert random frame to it.
+            -------------------------------------------------------------------
+            info_m("Step 2.1");
+
+            for i in 1 to txt_buf_count loop
+                rand_int_v(7, tmp_int);
+                ctu_set_txt_buf_prio(i, tmp_int, DUT_NODE, chn);
+            end loop;
+
+            for j in 1 to txt_buf_count loop
+
+                txt_buf_index := j;
+                if (txt_buf_index mod 2 = 0) then
+                    txt_buf_index := txt_buf_index - 1;
+                end if;
+
+                generate_can_frame(can_tx_frame);
+                ctu_put_tx_frame(can_tx_frame, txt_buf_index, DUT_NODE, chn);
+                ctu_put_tx_frame(can_tx_frame, txt_buf_index + 1, DUT_NODE, chn);
+
+                -------------------------------------------------------------------
+                -- @2.2 Enable test access to buffer RAMs. Generate random word
+                --      index (within first 4 words of TXT Buffer), and flip such
+                --      bit. Disable test access.
+                -------------------------------------------------------------------
+                info_m("Step 2.2");
+
+                -- Enable test access
+                ctu_set_tst_mem_access(true, DUT_NODE, chn);
+                tst_mem := txt_buf_to_test_mem_tgt(txt_buf_index);
+
+                -- Read, flip, and write back
+                rand_int_v(3, corrupt_wrd_index);
+                rand_int_v(31, corrupt_bit_index);
+                ctu_read_tst_mem(r_data, corrupt_wrd_index, tst_mem, DUT_NODE, chn);
+                r_data(corrupt_bit_index) := not r_data(corrupt_bit_index);
+                ctu_write_tst_mem(r_data, corrupt_wrd_index, tst_mem, DUT_NODE, chn);
+
+                -- Disable test mem access
+                ctu_set_tst_mem_access(false, DUT_NODE, chn);
+
+                -----------------------------------------------------------------------
+                -- @2.3 Send set ready command to selected original TXT Buffer. Wait until
+                --      DUT starts transmission, and check that "original" TXT Buffer is in
+                --      "Parity error" and "backup" TXT Buffer is in "TX in progress" state.
+                --      Check that STATUS[TXPE] is set in DUT.
+                -----------------------------------------------------------------------
+                info_m("Step 2.3");
+
+                txt_buf_vector := x"00";
+                txt_buf_vector(txt_buf_index - 1) := '1';
+
+                ctu_give_txt_cmd(buf_set_ready, txt_buf_vector, DUT_NODE, chn);
+
+                ctu_wait_frame_start(true, false, DUT_NODE, chn);
+
+                ctu_get_txt_buf_state(txt_buf_index, txt_buf_state, DUT_NODE, chn);
+                check_m(txt_buf_state = buf_parity_err, "'Original' TXT Buffer is in 'Parity error'");
+                ctu_get_txt_buf_state(txt_buf_index + 1, txt_buf_state, DUT_NODE, chn);
+                check_m(txt_buf_state = buf_tx_progress, "'Backup' TXT Buffer is in 'TX in Progress'");
+
+                ctu_get_status(status_1, DUT_NODE, chn);
+                check_m(status_1.tx_parity_error, "Parity error set.");
+                check_false_m(status_1.tx_double_parity_error, "Double parity error not set.");
+
+                -----------------------------------------------------------------------
+                -- @2.3 Wait until transmission ends and bus is idle. Check that
+                --      "original" TXT Buffer is in "TX Parity Error" state and
+                --      "backup" TXT buffer ended in "TX OK" state. Issue Set Empty to
+                --      original TXT Buffer, and check it moves to Empty!
+                -----------------------------------------------------------------------
+                info_m("Step 2.3");
+
+                ctu_wait_frame_sent(DUT_NODE, chn);
+                ctu_wait_bus_idle(TEST_NODE, chn);
+                ctu_wait_bus_idle(DUT_NODE, chn);
+
+                ctu_get_txt_buf_state(txt_buf_index, txt_buf_state, DUT_NODE, chn);
+                check_m(txt_buf_state = buf_parity_err, "'Original' TXT Buffer is in 'Parity error'");
+                ctu_get_txt_buf_state(txt_buf_index + 1, txt_buf_state, DUT_NODE, chn);
+                check_m(txt_buf_state = buf_done, "'Backup' TXT Buffer is in 'TX OK'");
+
+                -- Check and clear STATUS[TXPE]
+                ctu_get_status(status_1, DUT_NODE, chn);
+                check_m(status_1.tx_parity_error, "Parity error set.");
+                check_false_m(status_1.tx_double_parity_error, "Double parity error not set.");
+
+                command_1.clear_txpe := true;
+                ctu_give_cmd(command_1, DUT_NODE, chn);
+
+                ctu_get_status(status_1, DUT_NODE, chn);
+                check_false_m(status_1.tx_parity_error, "Parity error not set.");
+                check_false_m(status_1.tx_double_parity_error, "Double parity error not set.");
+
+                -- Issue Set Empty and check original Buffer is empty
+                ctu_give_txt_cmd(buf_set_empty, txt_buf_index, DUT_NODE, chn);
+                wait for 30 ns; -- Command is pipelined
+                ctu_get_txt_buf_state(txt_buf_index, txt_buf_state, DUT_NODE, chn);
+                check_m(txt_buf_state = buf_empty, "'Original' TXT Buffer moved to Empty after 'Parity error'");
+
+            end loop;
+        end loop;
+
+  end procedure;
+
+end package body;

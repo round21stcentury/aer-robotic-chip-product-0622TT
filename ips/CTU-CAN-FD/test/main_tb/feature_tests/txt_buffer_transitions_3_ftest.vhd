@@ -1,0 +1,226 @@
+--------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2021-2023 Ondrej Ille
+-- Copyright (C) 2023-     Logic Design Services Ltd.s
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to use, copy, modify, merge, publish, distribute the Component for
+-- non-commercial purposes. Using the Component for commercial purposes is
+-- forbidden unless previously agreed with Copyright holder.
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+-- -------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2015-2020 MIT License
+--
+-- Authors:
+--     Ondrej Ille <ondrej.ille@gmail.com>
+--     Martin Jerabek <martin.jerabek01@gmail.com>
+--
+-- Project advisors:
+-- 	Jiri Novak <jnovak@fel.cvut.cz>
+-- 	Pavel Pisa <pisa@cmp.felk.cvut.cz>
+--
+-- Department of Measurement         (http://meas.fel.cvut.cz/)
+-- Faculty of Electrical Engineering (http://www.fel.cvut.cz)
+-- Czech Technical University        (http://www.cvut.cz/)
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to deal in the Component without restriction, including without limitation
+-- the rights to use, copy, modify, merge, publish, distribute, sublicense,
+-- and/or sell copies of the Component, and to permit persons to whom the
+-- Component is furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- @TestInfoStart
+--
+-- @Purpose:
+--  TXT Buffer FSMs corner-case transitions 3
+--
+-- @Verifies:
+--  @1. When Unlock from Protocol control arrives simultaneously as Set Abort
+--      from SW, TXT Buffer will go to TX Aborted immediately.
+--
+-- @Test sequence:
+--  @1. Loop for all TXT Buffers and incrementing wait times within a bit:
+--      @1.1. Generate frame and send it from a TXT Buffer. Wait until it
+--            starts being transmitted! Wait until dominant bit is being
+--            transmitted. Now we are shortly after SYNC segment of dominant
+--            transmitted bit.
+--      @1.2. Force the bit to be recessive. Wait until some time before
+--            Sample point. Wait small incremental delay. Send Set Abort Command.
+--      @1.3. Wait until Sample point and release the bus value.
+--      @1.4. Wait until bus is Idle.
+--
+-- @TestInfoEnd
+--------------------------------------------------------------------------------
+-- Revision History:
+--      12.11.2023   Created file
+--------------------------------------------------------------------------------
+
+Library ctu_can_fd_tb;
+context ctu_can_fd_tb.ieee_context;
+context ctu_can_fd_tb.rtl_context;
+context ctu_can_fd_tb.tb_common_context;
+
+use ctu_can_fd_tb.feature_test_agent_pkg.all;
+use ctu_can_fd_tb.clk_gen_agent_pkg.all;
+
+package txt_buffer_transitions_3_ftest is
+    procedure txt_buffer_transitions_3_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    );
+end package;
+
+
+package body txt_buffer_transitions_3_ftest is
+
+    procedure txt_buffer_transitions_3_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    ) is
+        variable can_frame          :       t_ctu_frame;
+        variable command            :       t_ctu_command := t_ctu_command_rst_val;
+        variable status             :       t_ctu_status;
+	    variable txt_buf_state	    :	    t_ctu_txt_buff_state;
+        variable mode               :       t_ctu_mode;
+        variable num_txt_bufs       :       natural;
+        variable frame_sent         :       boolean;
+        variable err_counters       :       t_ctu_err_ctrs;
+        variable fault_state        :       t_ctu_fault_state;
+        variable can_tx_val         :       std_logic;
+        variable bus_timing         :       t_ctu_bit_time_cfg;
+        variable tseg1              :       natural;
+    begin
+
+        -------------------------------------------------------------------------------------------
+        -- @1. Loop for all TXT Buffers and incrementing wait times within a bit:
+        -------------------------------------------------------------------------------------------
+        info_m("Step 1");
+        ctu_get_txt_buf_cnt(num_txt_bufs, DUT_NODE, chn);
+
+        -- Configure test mode to allow clearing error counters between iterations so that
+        -- we dont get to bus off!
+        mode.test := true;
+        ctu_set_mode(mode, DUT_NODE, chn);
+
+        -- Query the bus timing
+        ctu_get_bit_time_cfg_v(bus_timing, DUT_NODE, chn);
+        tseg1 := bus_timing.tq_nbt * (1 + bus_timing.prop_nbt + bus_timing.ph1_nbt);
+
+        -- Generate single common frame
+        generate_can_frame(can_frame);
+        can_frame.frame_format := NORMAL_CAN;
+
+        for txt_buf_index in 1 to num_txt_bufs loop
+            for wait_cycles in 0 to 20 loop
+
+                -----------------------------------------------------------------------------------
+                -- @1.1. Generate frame and send it from a TXT Buffer. Wait until it starts being
+                --       transmitted! Wait until dominant bit is being transmitted. Now we are
+                --       shortly after SYNC segment of dominant transmitted bit.
+                -----------------------------------------------------------------------------------
+                info_m("Step 1.1 with wait cycles: " & integer'image(wait_cycles));
+
+                ctu_put_tx_frame(can_frame, txt_buf_index, DUT_NODE, chn);
+                ctu_give_txt_cmd(buf_set_ready, txt_buf_index, DUT_NODE, chn);
+
+                ctu_wait_frame_start(true, false, DUT_NODE, chn);
+                wait for 1000 ns;
+
+                while (true) loop
+                    get_can_tx(DUT_NODE, can_tx_val, chn);
+                    if (can_tx_val = RECESSIVE) then
+                        exit;
+                    end if;
+                    wait for 10 ns;
+                end loop;
+
+                while (true) loop
+                    get_can_tx(DUT_NODE, can_tx_val, chn);
+                    if (can_tx_val = DOMINANT) then
+                        exit;
+                    end if;
+                    wait for 10 ns;
+                end loop;
+
+                -----------------------------------------------------------------------------------
+                -- @1.2. Force the bit to be recessive. Wait until some time before Sample point.
+                --       Wait small incremental delay.
+                -----------------------------------------------------------------------------------
+                info_m("Step 1.2 with wait cycles: " & integer'image(wait_cycles));
+
+                force_bus_level(RECESSIVE, chn);
+
+                -- Wait till somewhere before Sample point
+                for i in 1 to tseg1 - 10 loop
+                    clk_agent_wait_cycle(chn);
+                end loop;
+
+                -- Wait incrementally and try hit the point where Protocol Engine unlocks the TXT
+                -- Buffer due to an Error.
+                for i in 0 to wait_cycles loop
+                    clk_agent_wait_cycle(chn);
+                end loop;
+
+                ctu_give_txt_cmd(buf_set_abort, txt_buf_index, DUT_NODE, chn);
+
+                -----------------------------------------------------------------------------------
+                -- @1.3. Wait until Sample point and release the bus value.
+                -----------------------------------------------------------------------------------
+                info_m("Step 1.3 with wait cycles: " & integer'image(wait_cycles));
+
+                ctu_wait_sample_point(DUT_NODE, chn);
+                wait for 50 ns;
+
+                release_bus_level(chn);
+
+                -----------------------------------------------------------------------------------
+                -- @1.4. Wait until bus is Idle and clear TX Error counter.
+                -----------------------------------------------------------------------------------
+                info_m("Step 1.4 with wait cycles: " & integer'image(wait_cycles));
+
+                ctu_wait_bus_idle(DUT_NODE, chn);
+                err_counters.tx_counter := 0;
+                ctu_set_err_ctrs(err_counters, DUT_NODE, chn);
+
+                wait for 100 ns;
+            end loop;
+        end loop;
+
+  end procedure;
+end package body;

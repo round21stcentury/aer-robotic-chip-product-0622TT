@@ -1,0 +1,84 @@
+# ══════════════════════════════════════════════════════════════
+# 스텝4 — 현재포즈 움츠림 (★최종: FSR → 현재+델타). FPGA 프로그래밍 자동화.
+#   ※ 이 폴더 안에서 실행.
+# ══════════════════════════════════════════════════════════════
+SHELL   := /bin/bash
+XDIR    ?= /opt/Xilinx/2025.2
+VIV_ENV := source $(XDIR)/Vivado/settings64.sh
+VTS_ENV := source $(XDIR)/Vitis/settings64.sh
+XSCT    := $(XDIR)/Vitis/bin/xsct
+PROJ    := fpga/vivado/reflex_vivado
+APP     := reflex_s4_app
+
+# ── PS 프로그래밍(재합성 불필요) ──
+SPI_DIV  ?= 4
+THRESH_V ?= 0.76
+FSR_RULE ?= 0x005B                  # 움츠림(act3). 홈=0x005A, estop=0x0039
+DELTA_J2 ?= 0x3A98                  # +15000 (0.001도)
+DELTA_J3 ?= 0xC568                  # -15000
+THRESH_CODE := $(shell awk "BEGIN{c=$(THRESH_V)*4096+0.5; if(c>4095)c=4095; if(c<0)c=0; printf \"%d\", c}")
+
+ASCII_WS := ../_vitis_ws/s4
+PROG_BIT ?= $(shell find $(PROJ) -name 'design_1_wrapper.bit' 2>/dev/null | head -1)
+PROG_PS7 ?= $(shell find $(PROJ) -name 'ps7_init.tcl' 2>/dev/null | head -1)
+PROG_ELF ?= $(shell find $(ASCII_WS)/$(APP) -name '*.elf' 2>/dev/null | head -1)
+ZYBO_TTY ?= /dev/ttyUSB1
+BITRATE  ?= 1000000
+ENVV     := SPI_DIV=$(SPI_DIV) THRESH_CODE=$(THRESH_CODE) FSR_RULE=$(FSR_RULE) DELTA_J2=$(DELTA_J2) DELTA_J3=$(DELTA_J3)
+
+.PHONY: help sim project reflex xsa fpga gui build program rerun rebuild serial can-up can-down can-mon clean
+
+help:
+	@echo "═══ 스텝4: 현재포즈 움츠림 (최종 목표) ═══"
+	@echo " make sim      RTL 시뮬 (칩+PL) PASS 확인"
+	@echo " make fpga     project→reflex→xsa (XADC 포함) ★Chrome 닫기, -jobs2"
+	@echo " make build    PS 앱. 델타: make build DELTA_J2=0x3A98 / 임계: THRESH_V=0.6 / 규칙: FSR_RULE=0x005B"
+	@echo " make program  보드 JTAG / make serial  MCP 관측"
+	@echo " make can-up && make can-mon   FSR 누르면 candump 0x155~7=현재+델타"
+	@echo " (HIL: PC 에서 virtual_robot --cmd-iface can0 → 임의포즈로 둔 뒤 FSR → 그만큼 움츠림)"
+
+sim:
+	@echo "── 칩 통합 (tt_um_reflex_s4) ──"
+	bash chip/sim/run_sim_top.sh  | grep -E '====|FAIL'
+	@echo "── PL 통합 (reflex_top_s4) ──"
+	bash pl/sim/run_sim_topc.sh   | grep -E '====|FAIL'
+
+project:
+	@test ! -d $(PROJ) || { echo "이미 있음 → make clean"; exit 1; }
+	cd fpga/vivado && $(VIV_ENV) && vivado -mode batch -source create_project_s4.tcl
+reflex:
+	cd fpga/vivado && $(VIV_ENV) && vivado -mode batch -source add_reflex_s4.tcl
+xsa:
+	@echo "★Chrome 닫기 (OOM 방지). -jobs 2."
+	cd fpga/vivado && $(VIV_ENV) && vivado -mode batch -source build_xsa_s4.tcl
+fpga: project reflex xsa
+gui:
+	$(VIV_ENV) && vivado $(PROJ)/reflex_vivado.xpr &
+
+build:
+	@echo "→ $(ENVV)"
+	cd fpga && $(VTS_ENV) && $(ENVV) vitis -s build_app_s4.py
+program:
+	@test -f "$(PROG_BIT)" || { echo "★비트 없음: make fpga 먼저"; exit 1; }
+	@test -f "$(PROG_ELF)" || { echo "★elf 없음: make build 먼저"; exit 1; }
+	$(XSCT) fpga/tools/program_board.tcl $(abspath $(PROG_BIT)) $(abspath $(PROG_PS7)) $(abspath $(PROG_ELF))
+rerun:
+	@test -f "$(PROG_ELF)" || { echo "★elf 없음 — make build 먼저"; exit 1; }
+	$(XSCT) fpga/tools/rerun_board.tcl $(abspath $(PROG_ELF))
+rebuild:
+	cd fpga && $(VTS_ENV) && $(ENVV) vitis -s build_app_s4.py
+serial:
+	picocom -b 115200 $(ZYBO_TTY)
+can-up:
+	sudo ip link set can0 down 2>/dev/null; sudo ip link set can0 type can bitrate $(BITRATE); sudo ip link set can0 up
+	@ip -details link show can0 | grep -E 'can state|bitrate'
+can-down:
+	sudo ip link set can0 down
+can-mon:
+	candump -ta -c can0
+
+clean:
+	rm -rf $(PROJ) fpga/vitis_ws $(ASCII_WS) chip/sim/xsim.dir chip/sim/*.jou chip/sim/*.log chip/sim/.Xil chip/sim/*.pb \
+	       pl/sim/xsim.dir pl/sim/*.jou pl/sim/*.log pl/sim/.Xil pl/sim/*.pb \
+	       fpga/vivado/*.jou fpga/vivado/*.log fpga/vivado/.Xil
+	@echo "✅ 정리"

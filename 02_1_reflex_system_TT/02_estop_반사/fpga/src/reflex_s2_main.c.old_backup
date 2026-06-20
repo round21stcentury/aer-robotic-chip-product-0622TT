@@ -1,0 +1,56 @@
+/* reflex_s2_main.c — 스텝2 PS 앱 (PS 개입 최소: 설정 한 줄 + MCP 상태 관측 출력)
+ *   하는 일:
+ *     ① cfg axi_gpio(0x41200000) 에 설정 적재: [8]=enable, [7:0]=SPI_DIV(칩→MCP 속도).
+ *     ② ★PS7 EMIO GPIO★ 로 칩이 되읽은 MCP 레지스터를 읽어 시리얼에 출력(관측성).
+ *        obs0 = EMIO[31:0] = bank2 = {CANSTAT,CNF1,CNF2,CNF3}
+ *        obs1 = EMIO[63:32]= bank3 = {EFLG,TEC,REC,CANINTF}
+ *   ★왜 EMIO 인가: Vitis2025.2 lopper 가 입력 axi_gpio/커스텀 슬레이브 SDT 에서 깨짐.
+ *     EMIO 는 ps7 gpio(0xE000A000, 모든 Zynq)라 새 노드 안 생겨 lopper 안전.
+ *   ★PS 는 CAN/이더넷 안 함 — 칩이 MCP2515 로 CAN 직접. PS 는 설정+관측만, PL 이 SPI 다 함.
+ *   SPI 속도 변경(재합성 없이): make build SPI_DIV=6.
+ */
+#include "xil_printf.h"
+#include "xil_types.h"
+#include "xil_io.h"
+#include "xgpiops.h"
+#include "platform.h"
+#include "sleep.h"
+
+#ifndef SPI_DIV_CODE
+#define SPI_DIV_CODE 4
+#endif
+#define CFG_GPIO   0x41200000U   /* 출력 axi_gpio 16b: [8]=enable [7:0]=SPI_DIV */
+#define PS_GPIO_BASE 0xE000A000U /* ps7 gpio (EMIO 포함) */
+#define EMIO_BANK0 2             /* EMIO[31:0]  */
+#define EMIO_BANK1 3             /* EMIO[63:32] */
+
+static XGpioPs Gpio;
+
+int main(void)
+{
+    init_platform();
+    xil_printf("\r\n=== 스텝2: MCP 제어기 실증 (칩이 MCP2515 로 CAN 직접) ===\r\n");
+
+    /* EMIO GPIO 초기화 (관측 입력 읽기용) */
+    XGpioPs_Config *gcfg = XGpioPs_LookupConfig(PS_GPIO_BASE);
+    if (gcfg) XGpioPs_CfgInitialize(&Gpio, gcfg, gcfg->BaseAddr);
+
+    u32 cfg = (1u << 8) | (SPI_DIV_CODE & 0xFF);
+    Xil_Out32(CFG_GPIO, cfg);
+    xil_printf("[CFG] SPI_DIV=%d, enable=1 (cfg=0x%03x) -> 칩 0x03/0x02 적재(PL 자동)\r\n",
+               (int)(SPI_DIV_CODE & 0xFF), (unsigned)cfg);
+    xil_printf("[관측] 칩이 MCP2515 에서 되읽은 값. 기대: CNF=00/C0/80, CANSTAT OPMOD=000.\r\n");
+    xil_printf("       DIP(SW0) 올리면 candump can0 에 150# 주기 송신, 내리면 멈춤.\r\n\r\n");
+
+    for (;;) {
+        u32 o0 = XGpioPs_Read(&Gpio, EMIO_BANK0);   /* {CANSTAT,CNF1,CNF2,CNF3} */
+        u32 o1 = XGpioPs_Read(&Gpio, EMIO_BANK1);   /* {EFLG,TEC,REC,CANINTF} */
+        u8 canstat=(o0>>24)&0xFF, cnf1=(o0>>16)&0xFF, cnf2=(o0>>8)&0xFF, cnf3=o0&0xFF;
+        u8 eflg=(o1>>24)&0xFF, tec=(o1>>16)&0xFF, rec=(o1>>8)&0xFF, canintf=o1&0xFF;
+        xil_printf("[MCP] CANSTAT=0x%02x(OPMOD=%d) CNF1=0x%02x CNF2=0x%02x CNF3=0x%02x | EFLG=0x%02x TEC=%d REC=%d CANINTF=0x%02x\r\n",
+                   canstat, (canstat>>5)&0x7, cnf1, cnf2, cnf3, eflg, tec, rec, canintf);
+        sleep(1);
+    }
+    cleanup_platform();
+    return 0;
+}

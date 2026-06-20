@@ -1,0 +1,985 @@
+xhost +local:root
+non-network local connections being added to access control list
+docker run -i -t --rm --network host --ipc host \
+  --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 \
+   \
+  --env MODE=hil --env APP=motions/wave.py --env BACKEND=gazebo        --env FPGA_IP=192.168.1.10 \
+  -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+  $([ -e /dev/dri ] && echo --device=/dev/dri) \
+  -v /home/haeun/workspace/01_demo_260622/01_piper_fpga_testbed/01_piper_sdk/piper-hil-docker/ros2_ws:/root/ros2_ws:rw \
+  -v /home/haeun/workspace/01_demo_260622/01_piper_fpga_testbed/03_hils/piper_pc_handoff/pc_bridge:/pc_bridge:rw \
+  piper-hil:humble bash /pc_bridge/tests/hils_run.sh 
+=== Gazebo + ros2_control 기동 (arm_controller active 까지 대기) ===
+[INFO] [launch]: All log files can be found below /root/.ros/log/2026-06-15-11-24-58-970181-haeun-14U70Q-GA56K-41
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [joint8_ctrl.py-1]: process started with pid [56]
+[INFO] [gazebo-2]: process started with pid [58]
+[INFO] [robot_state_publisher-3]: process started with pid [60]
+[INFO] [spawn_entity.py-4]: process started with pid [62]
+[robot_state_publisher-3] [INFO] [1781522699.124294247] [robot_state_publisher]: got segment base_link
+[robot_state_publisher-3] [INFO] [1781522699.124441632] [robot_state_publisher]: got segment gripper_base
+[robot_state_publisher-3] [INFO] [1781522699.124454196] [robot_state_publisher]: got segment link1
+[robot_state_publisher-3] [INFO] [1781522699.124462922] [robot_state_publisher]: got segment link2
+[robot_state_publisher-3] [INFO] [1781522699.124470527] [robot_state_publisher]: got segment link3
+[robot_state_publisher-3] [INFO] [1781522699.124478041] [robot_state_publisher]: got segment link4
+[robot_state_publisher-3] [INFO] [1781522699.124486366] [robot_state_publisher]: got segment link5
+[robot_state_publisher-3] [INFO] [1781522699.124493830] [robot_state_publisher]: got segment link6
+[robot_state_publisher-3] [INFO] [1781522699.124500763] [robot_state_publisher]: got segment link7
+[robot_state_publisher-3] [INFO] [1781522699.124508297] [robot_state_publisher]: got segment link8
+[robot_state_publisher-3] [INFO] [1781522699.124516242] [robot_state_publisher]: got segment world
+[gazebo-2] Gazebo multi-robot simulator, version 11.10.2
+[gazebo-2] Copyright (C) 2012 Open Source Robotics Foundation.
+[gazebo-2] Released under the Apache 2 License.
+[gazebo-2] http://gazebosim.org
+[gazebo-2] 
+[spawn_entity.py-4] [INFO] [1781522699.395084712] [spawn_entity]: Spawn Entity started
+[spawn_entity.py-4] [INFO] [1781522699.395596579] [spawn_entity]: Loading entity published on topic robot_description
+[spawn_entity.py-4] [INFO] [1781522699.397896622] [spawn_entity]: Waiting for entity xml on robot_description
+[spawn_entity.py-4] [INFO] [1781522699.408645131] [spawn_entity]: Waiting for service /spawn_entity, timeout = 30
+[gazebo-2] Gazebo multi-robot simulator, version 11.10.2
+[gazebo-2] Copyright (C) 2012 Open Source Robotics Foundation.
+[gazebo-2] Released under the Apache 2 License.
+[gazebo-2] http://gazebosim.org
+[gazebo-2] 
+[spawn_entity.py-4] [INFO] [1781522699.409100052] [spawn_entity]: Waiting for service /spawn_entity
+[gazebo-2] [1;33m[Wrn] [gazebo_ros_init.cpp:178] [0m[1;33m
+[gazebo-2] #     # ####### ####### ###  #####  #######
+[gazebo-2] ##    # #     #    #     #  #     # #
+[gazebo-2] # #   # #     #    #     #  #       #
+[gazebo-2] #  #  # #     #    #     #  #       #####
+[gazebo-2] #   # # #     #    #     #  #       #
+[gazebo-2] #    ## #     #    #     #  #     # #
+[gazebo-2] #     # #######    #    ###  #####  #######
+[gazebo-2] 
+[gazebo-2] This version of Gazebo, now called Gazebo classic, reaches end-of-life
+[gazebo-2] in January 2025. Users are highly encouraged to migrate to the new Gazebo
+[gazebo-2] using our migration guides (https://gazebosim.org/docs/latest/gazebo_classic_migration?utm_source=gazebo_ros_pkgs&utm_medium=cli)
+[gazebo-2] 
+[gazebo-2] [0m[1;33m
+[gazebo-2] [1;32m[Msg] [0m[1;32mWaiting for master.[0m[1;32m
+[gazebo-2] [0m[1;32m[0m[1;32m[0m[1;32m[Msg] [0m[1;32mConnected to gazebo master @ [0m[1;32mhttp://127.0.0.1:11345[0m[1;32m
+[gazebo-2] [0m[1;32m[0m[1;32m[0m[1;32m[Msg] [0m[1;32mPublicized address: [0m[1;32m192.168.219.51[0m[1;32m
+[gazebo-2] [0m[1;33m[0m[1;33m[0mamdgpu: os_same_file_description couldn't determine if two DRM fds reference the same file description.
+[gazebo-2] If they do, bad things may happen!
+[gazebo-2] ALSA lib confmisc.c:855:(parse_card) cannot find card '0'
+[gazebo-2] ALSA lib conf.c:5178:(_snd_config_evaluate) function snd_func_card_inum returned error: No such file or directory
+[gazebo-2] ALSA lib confmisc.c:422:(snd_func_concat) error evaluating strings
+[gazebo-2] ALSA lib conf.c:5178:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+[gazebo-2] ALSA lib confmisc.c:1334:(snd_func_refer) error evaluating name
+[gazebo-2] ALSA lib conf.c:5178:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+[gazebo-2] ALSA lib conf.c:5701:(snd_config_expand) Evaluate error: No such file or directory
+[gazebo-2] ALSA lib pcm.c:2664:(snd_pcm_open_noupdate) Unknown PCM default
+[gazebo-2] AL lib: (EE) ALCplaybackAlsa_open: Could not open playback device 'default': No such file or directory
+[gazebo-2] [1;31m[Err] [OpenAL.cc:84] [0m[1;31mUnable to open audio device[[0m[1;31mdefault[0m[1;31m]
+[gazebo-2]  Audio will be disabled.
+[gazebo-2] [0m[1;32m[0m[1;32m[0m[1;32m[Msg] [0m[1;32mLoading world file [[0m[1;32m/usr/share/gazebo-11/worlds/empty.world[0m[1;32m][0m[1;32m
+[spawn_entity.py-4] [INFO] [1781522699.913448356] [spawn_entity]: Calling service /spawn_entity
+[spawn_entity.py-4] [INFO] [1781522700.183877235] [spawn_entity]: Spawn status: SpawnEntity: Successfully spawned entity [piper]
+[INFO] [spawn_entity.py-4]: process has finished cleanly [pid 62]
+[INFO] [ros2-5]: process started with pid [180]
+[gazebo-2] [0m[INFO] [1781522700.374529835] [gazebo_ros2_control]: Loading gazebo_ros2_control plugin
+[gazebo-2] [INFO] [1781522700.377792049] [gazebo_ros2_control]: Starting gazebo_ros2_control plugin in namespace: /
+[gazebo-2] [INFO] [1781522700.377985480] [gazebo_ros2_control]: Starting gazebo_ros2_control plugin in ros 2 node: gazebo_ros2_control
+[gazebo-2] [0m[1;32m[0m[1;32m[0m[1;32m[Msg] [0m[1;32mWaiting for master.[0m[1;32m
+[gazebo-2] [0m[1;32m[0m[1;32m[0m[1;32m[Msg] [0m[1;32mConnected to gazebo master @ [0m[1;32mhttp://127.0.0.1:11345[0m[1;32m
+[gazebo-2] [0m[1;32m[0m[1;32m[0m[1;32m[Msg] [0m[1;32mPublicized address: [0m[1;32m192.168.219.51[0m[1;32m
+[gazebo-2] [1;33m[Wrn] [GuiIface.cc:298] [0m[1;33mCouldn't locate specified .ini. Creating file at [0m[1;33m"/root/.gazebo/gui.ini"[0m[1;33m
+[gazebo-2] [0m[1;33m[0m[1;33m[0m[INFO] [1781522700.381275706] [gazebo_ros2_control]: connected to service!! robot_state_publisher
+[gazebo-2] [INFO] [1781522700.381768247] [gazebo_ros2_control]: Received urdf from param server, parsing...
+[gazebo-2] [INFO] [1781522700.381808272] [gazebo_ros2_control]: Loading parameter files /root/ros2_ws/install/piper_gazebo/share/piper_gazebo/config/ros2_controllers.yaml
+[gazebo-2] [INFO] [1781522700.389683766] [gazebo_ros2_control]: Loading joint: joint1
+[gazebo-2] [INFO] [1781522700.389718752] [gazebo_ros2_control]: 	State:
+[gazebo-2] [INFO] [1781522700.389728961] [gazebo_ros2_control]: 		 position
+[gazebo-2] [INFO] [1781522700.389740743] [gazebo_ros2_control]: 			 found initial value: 0.000000
+[gazebo-2] [INFO] [1781522700.389755931] [gazebo_ros2_control]: 		 velocity
+[gazebo-2] [INFO] [1781522700.389761942] [gazebo_ros2_control]: 	Command:
+[gazebo-2] [INFO] [1781522700.389766721] [gazebo_ros2_control]: 		 position
+[gazebo-2] [INFO] [1781522700.389889641] [gazebo_ros2_control]: Loading joint: joint2
+[gazebo-2] [INFO] [1781522700.389899029] [gazebo_ros2_control]: 	State:
+[gazebo-2] [INFO] [1781522700.389903918] [gazebo_ros2_control]: 		 position
+[gazebo-2] [INFO] [1781522700.389908837] [gazebo_ros2_control]: 			 found initial value: 0.000000
+[gazebo-2] [INFO] [1781522700.389914758] [gazebo_ros2_control]: 		 velocity
+[gazebo-2] [INFO] [1781522700.389919387] [gazebo_ros2_control]: 	Command:
+[gazebo-2] [INFO] [1781522700.389923875] [gazebo_ros2_control]: 		 position
+[gazebo-2] [INFO] [1781522700.390015036] [gazebo_ros2_control]: Loading joint: joint3
+[gazebo-2] [INFO] [1781522700.390029483] [gazebo_ros2_control]: 	State:
+[gazebo-2] [INFO] [1781522700.390040033] [gazebo_ros2_control]: 		 position
+[gazebo-2] [INFO] [1781522700.390049260] [gazebo_ros2_control]: 			 found initial value: 0.000000
+[gazebo-2] [INFO] [1781522700.390066803] [gazebo_ros2_control]: 		 velocity
+[gazebo-2] [INFO] [1781522700.390077082] [gazebo_ros2_control]: 	Command:
+[gazebo-2] [INFO] [1781522700.390086059] [gazebo_ros2_control]: 		 position
+[gazebo-2] [INFO] [1781522700.390176808] [gazebo_ros2_control]: Loading joint: joint4
+[gazebo-2] [INFO] [1781522700.390190394] [gazebo_ros2_control]: 	State:
+[gazebo-2] [INFO] [1781522700.390199551] [gazebo_ros2_control]: 		 position
+[gazebo-2] [INFO] [1781522700.390208448] [gazebo_ros2_control]: 			 found initial value: 0.000000
+[gazebo-2] [INFO] [1781522700.390219629] [gazebo_ros2_control]: 		 velocity
+[gazebo-2] [INFO] [1781522700.390229237] [gazebo_ros2_control]: 	Command:
+[gazebo-2] [INFO] [1781522700.390238203] [gazebo_ros2_control]: 		 position
+[gazebo-2] [INFO] [1781522700.390319976] [gazebo_ros2_control]: Loading joint: joint5
+[gazebo-2] [INFO] [1781522700.390334283] [gazebo_ros2_control]: 	State:
+[gazebo-2] [INFO] [1781522700.390343761] [gazebo_ros2_control]: 		 position
+[gazebo-2] [INFO] [1781522700.390357807] [gazebo_ros2_control]: 			 found initial value: 0.000000
+[gazebo-2] [INFO] [1781522700.390368788] [gazebo_ros2_control]: 		 velocity
+[gazebo-2] [INFO] [1781522700.390376101] [gazebo_ros2_control]: 	Command:
+[gazebo-2] [INFO] [1781522700.390385749] [gazebo_ros2_control]: 		 position
+[gazebo-2] [INFO] [1781522700.390475678] [gazebo_ros2_control]: Loading joint: joint6
+[gazebo-2] [INFO] [1781522700.390487820] [gazebo_ros2_control]: 	State:
+[gazebo-2] [INFO] [1781522700.390496727] [gazebo_ros2_control]: 		 position
+[gazebo-2] [INFO] [1781522700.390505784] [gazebo_ros2_control]: 			 found initial value: 0.000000
+[gazebo-2] [INFO] [1781522700.390516825] [gazebo_ros2_control]: 		 velocity
+[gazebo-2] [INFO] [1781522700.390525691] [gazebo_ros2_control]: 	Command:
+[gazebo-2] [INFO] [1781522700.390534528] [gazebo_ros2_control]: 		 position
+[gazebo-2] [INFO] [1781522700.390617683] [gazebo_ros2_control]: Loading joint: joint7
+[gazebo-2] [INFO] [1781522700.390630808] [gazebo_ros2_control]: 	State:
+[gazebo-2] [INFO] [1781522700.390639714] [gazebo_ros2_control]: 		 position
+[gazebo-2] [INFO] [1781522700.390647790] [gazebo_ros2_control]: 			 found initial value: 0.000000
+[gazebo-2] [INFO] [1781522700.390657858] [gazebo_ros2_control]: 		 velocity
+[gazebo-2] [INFO] [1781522700.390666094] [gazebo_ros2_control]: 	Command:
+[gazebo-2] [INFO] [1781522700.390674139] [gazebo_ros2_control]: 		 position
+[gazebo-2] [INFO] [1781522700.390779376] [gazebo_ros2_control]: Loading joint: joint8
+[gazebo-2] [INFO] [1781522700.390819230] [gazebo_ros2_control]: 	State:
+[gazebo-2] [INFO] [1781522700.390832936] [gazebo_ros2_control]: 		 position
+[gazebo-2] [INFO] [1781522700.390842464] [gazebo_ros2_control]: 			 found initial value: 0.000000
+[gazebo-2] [INFO] [1781522700.390852833] [gazebo_ros2_control]: 		 velocity
+[gazebo-2] [INFO] [1781522700.390861790] [gazebo_ros2_control]: 	Command:
+[gazebo-2] [INFO] [1781522700.390870035] [gazebo_ros2_control]: 		 position
+[gazebo-2] [INFO] [1781522700.391066603] [resource_manager]: Initialize hardware 'GazeboSystem' 
+[gazebo-2] [INFO] [1781522700.391199141] [resource_manager]: Successful initialization of hardware 'GazeboSystem'
+[gazebo-2] [INFO] [1781522700.391286765] [resource_manager]: 'configure' hardware 'GazeboSystem' 
+[gazebo-2] [INFO] [1781522700.391298737] [resource_manager]: Successful 'configure' of hardware 'GazeboSystem'
+[gazebo-2] [INFO] [1781522700.391307844] [resource_manager]: 'activate' hardware 'GazeboSystem' 
+[gazebo-2] [INFO] [1781522700.391315098] [resource_manager]: Successful 'activate' of hardware 'GazeboSystem'
+[gazebo-2] [INFO] [1781522700.391393565] [gazebo_ros2_control]: Loading controller_manager
+[gazebo-2] [WARN] [1781522700.406282319] [gazebo_ros2_control]:  Desired controller update period (0.002 s) is slower than the gazebo simulation period (0.001 s).
+[gazebo-2] [INFO] [1781522700.406460372] [gazebo_ros2_control]: Loaded gazebo_ros2_control.
+[gazebo-2] amdgpu: os_same_file_description couldn't determine if two DRM fds reference the same file description.
+[gazebo-2] If they do, bad things may happen!
+[gazebo-2] [1;33m[Wrn] [GuiIface.cc:120] [0m[1;33mQStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/tmp/runtime-root'[0m[1;33m
+[gazebo-2] [0m[1;33m[0m[1;33m[0m[1;33m[Wrn] [Event.cc:61] [0m[1;33mWarning: Deleting a connection right after creation. [0m[1;33mMake sure to save the ConnectionPtr from a Connect call
+[gazebo-2] [0m[INFO] [1781522701.420420759] [controller_manager]: Loading controller 'joint_state_broadcaster'
+[gazebo-2] [INFO] [1781522701.435596771] [controller_manager]: Configuring controller 'joint_state_broadcaster'
+[gazebo-2] [INFO] [1781522701.435873078] [joint_state_broadcaster]: 'joints' or 'interfaces' parameter is empty. All available state interfaces will be published
+[ros2-5] Successfully loaded controller joint_state_broadcaster into state active
+[INFO] [ros2-5]: process has finished cleanly [pid 180]
+[INFO] [ros2-6]: process started with pid [255]
+[INFO] [ros2-7]: process started with pid [257]
+[INFO] [ros2-8]: process started with pid [259]
+[gazebo-2] [INFO] [1781522702.438631679] [controller_manager]: Loading controller 'arm_controller'
+[gazebo-2] [WARN] [1781522702.452097041] [arm_controller]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[gazebo-2] [INFO] [1781522702.454328796] [controller_manager]: Loading controller 'gripper8_controller'
+[gazebo-2] [WARN] [1781522702.460837252] [gripper8_controller]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[gazebo-2] [INFO] [1781522702.462310879] [controller_manager]: Loading controller 'gripper_controller'
+[gazebo-2] [WARN] [1781522702.470276982] [gripper_controller]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[gazebo-2] [INFO] [1781522702.472496154] [controller_manager]: Configuring controller 'arm_controller'
+[gazebo-2] [INFO] [1781522702.472673826] [arm_controller]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[gazebo-2] [INFO] [1781522702.472710214] [arm_controller]: Command interfaces are [position] and state interfaces are [position velocity].
+[gazebo-2] [INFO] [1781522702.472769726] [arm_controller]: Using 'splines' interpolation method.
+[gazebo-2] [INFO] [1781522702.474134459] [arm_controller]: Controller state will be published at 50.00 Hz.
+[gazebo-2] [INFO] [1781522702.475893710] [arm_controller]: Action status changes will be monitored at 20.00 Hz.
+[gazebo-2] [INFO] [1781522702.482697539] [controller_manager]: Configuring controller 'gripper8_controller'
+[gazebo-2] [INFO] [1781522702.482787588] [gripper8_controller]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[gazebo-2] [INFO] [1781522702.482801764] [gripper8_controller]: Command interfaces are [position] and state interfaces are [position velocity].
+[gazebo-2] [INFO] [1781522702.482811583] [gripper8_controller]: Using 'splines' interpolation method.
+[gazebo-2] [INFO] [1781522702.483317529] [gripper8_controller]: Controller state will be published at 50.00 Hz.
+[gazebo-2] [INFO] [1781522702.484636657] [gripper8_controller]: Action status changes will be monitored at 20.00 Hz.
+[gazebo-2] [INFO] [1781522702.488415537] [controller_manager]: Configuring controller 'gripper_controller'
+[gazebo-2] [INFO] [1781522702.488531383] [gripper_controller]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[gazebo-2] [INFO] [1781522702.488552202] [gripper_controller]: Command interfaces are [position] and state interfaces are [position velocity].
+[gazebo-2] [INFO] [1781522702.488567291] [gripper_controller]: Using 'splines' interpolation method.
+[gazebo-2] [INFO] [1781522702.488971387] [gripper_controller]: Controller state will be published at 50.00 Hz.
+[gazebo-2] [INFO] [1781522702.490207810] [gripper_controller]: Action status changes will be monitored at 20.00 Hz.
+[ros2-6] Successfully loaded controller arm_controller into state active
+[ros2-8] Successfully loaded controller gripper8_controller into state active
+[ros2-7] Successfully loaded controller gripper_controller into state active
+[INFO] [ros2-8]: process has finished cleanly [pid 259]
+[INFO] [ros2-6]: process has finished cleanly [pid 255]
+[INFO] [ros2-7]: process has finished cleanly [pid 257]
+[hils] arm_controller active
+=== bridge: vcan0 → 192.168.1.10:5000 ===
+=== virtual_robot (cmd=can0, gazebo) ===
+[bridge] vcan0 명령 -> UDP ('192.168.1.10', 5000)  허용 ID=['0x151', '0x155', '0x156', '0x157', '0x471']
+[vrobot] running, feedback @ 200Hz
+=== 컨트롤러 (piper_sdk, vcan0, judge_flag=false) ===
+[0m[INFO] [1781522705.217613033] [piper_ctrl_single_node]: can_port is vcan0[0m
+[0m[INFO] [1781522705.218332729] [piper_ctrl_single_node]: auto_enable is False[0m
+[0m[INFO] [1781522705.218995990] [piper_ctrl_single_node]: gripper_exist is False[0m
+[0m[INFO] [1781522705.219632611] [piper_ctrl_single_node]: gripper_val_mutiple is 1[0m
+[0m[INFO] [1781522705.220352077] [piper_ctrl_single_node]: judge_flag is False[0m
+[0m[INFO] [1781522705.220878412] [piper_ctrl_single_node]: can_auto_init is True[0m
+=== 모션 실행: motions/wave.py ===
+[0m[INFO] [1781522709.443930846] [piper_ctrl_single_node]: Received enable flag:[0m
+[0m[INFO] [1781522709.444571805] [piper_ctrl_single_node]: enable_flag: True[0m
+[0m[INFO] [1781522709.643627898] [piper_ctrl_single_node]: Received enable flag:[0m
+[0m[INFO] [1781522709.644069294] [piper_ctrl_single_node]: enable_flag: True[0m
+[0m[INFO] [1781522709.843623629] [piper_ctrl_single_node]: Received enable flag:[0m
+[0m[INFO] [1781522709.844070215] [piper_ctrl_single_node]: enable_flag: True[0m
+[0m[INFO] [1781522710.062649583] [hils_motion]: enable 발행[0m
+[0m[INFO] [1781522710.063129892] [hils_motion]: → [0.0, -0.6, 0.6, 0.0, 0.0, 0.0] (1.2s @ 25%)[0m
+[0m[INFO] [1781522710.064141064] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.065165430] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.065666928] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.066132700] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.066578684] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.067016263] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.067765655] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.114390563] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.114939910] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.115770685] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.116262465] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.116684144] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.117240264] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.118134667] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.165042555] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.165679767] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.166783712] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.167329143] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.167845449] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.168306561] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.168810384] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.215450631] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.216133989] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.217118681] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.217586276] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.218018545] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.218449251] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.218960307] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.265274764] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.265720057] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.266132489] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.266529030] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.266922146] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.267932346] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.268474079] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.315634549] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.316213362] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.316652874] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.317050078] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.317521349] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.318418888] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.319020253] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.365904296] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.366467370] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.366966864] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.367426404] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.367831061] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.368257489] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.369353830] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.416152202] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.416610380] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.417001261] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.417448408] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.417978339] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.418421077] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.418998698] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.466276808] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.466737951] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.467185578] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.467600294] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.468057289] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.468537738] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.469052491] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.517112935] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.517710473] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.518175152] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.518609044] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.519048907] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.519751872] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.520870524] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.567691710] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.568230848] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.568667295] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.569094394] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.569513278] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.569951117] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.570438268] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.617615049] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.618082283] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.618497119] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.619001222] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.619451194] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.619861592] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.620377046] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.668735577] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.669219853] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.669778268] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.670367250] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.670865302] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.671328368] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.671938540] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.718864270] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.719308181] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.719701757] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.720115601] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.720552880] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.721047214] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.721645995] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.769123398] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.769711889] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.770300630] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.770804693] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.771247441] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.771626360] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.772279372] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.818742087] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.819270585] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.820276156] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.820837577] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.821454461] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.822004169] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.822627245] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.869243667] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.869773949] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.870215415] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.871147529] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.871621045] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.872091535] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.872596520] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.919735830] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.920430109] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.920973897] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.922001379] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.922421385] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.922824298] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.923312532] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522710.969742325] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522710.970340284] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522710.970882318] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522710.971335055] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522710.972385289] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522710.972822558] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522710.973321862] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.019910943] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.020416599] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.020975785] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.021471893] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.021870338] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522711.022882692] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.023370806] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.070359975] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.070870190] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.071362350] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.071793617] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.072247196] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522711.072684043] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.073614885] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.120510509] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.120943249] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.121364156] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.121758374] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.122156408] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522711.122536970] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.122987002] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.170933272] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.171479194] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.171911793] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.172346056] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.172770209] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522711.173201746] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.173773546] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.221678399] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.222283080] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.222682567] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.223082516] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.223473928] [piper_ctrl_single_node]: joint5: 0.0[0m
+[0m[INFO] [1781522711.223910214] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.224420499] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.271660388] [hils_motion]: → [0.0, -0.6, 0.6, 0.0, 0.6, 0.0] (0.65s @ 25%)[0m
+[0m[INFO] [1781522711.272940242] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.273421021] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.273805461] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.274243059] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.274822754] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522711.275739779] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.276233203] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.323454446] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.323907754] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.324357295] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.324918595] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.325319205] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522711.325863313] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.326752937] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.373636630] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.374093745] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.374498422] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.374961037] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.375408685] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522711.375804595] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.376280005] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.423689421] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.424135255] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.424564798] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.424989964] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.425386415] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522711.425770244] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.426247176] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.473959088] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.474946755] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.475465075] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.475879931] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.476308212] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522711.477019593] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.477807397] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.524171317] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.524672745] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.525180054] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.525581385] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.526296333] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522711.526786439] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.527341267] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.574995531] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.575507780] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.576023515] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.576439793] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.576907769] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522711.577428603] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.578028165] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.625410831] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.625956131] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.626433604] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.626859491] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.627263196] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522711.627654088] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.628119138] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.675425811] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.675964138] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.676406596] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.676847711] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.677360210] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522711.677819259] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.678373386] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.725288196] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.726186066] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.726602435] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.727007963] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.727391391] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522711.727758227] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.728306834] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.775580866] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.776112240] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.776910403] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.777403806] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.777833871] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522711.778254107] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.778742391] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.825781634] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.826320402] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.826735368] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.827822863] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.828271833] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522711.828671260] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.829272274] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.876333729] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.876864051] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.877346263] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.878688354] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.879322611] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522711.879721868] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.880191607] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.926205081] [hils_motion]: → [0.0, -0.6, 0.6, 0.0, -0.6, 0.0] (0.65s @ 25%)[0m
+[0m[INFO] [1781522711.927315849] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.927795466] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.928617484] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.929042048] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.929463096] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522711.929867763] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.930355886] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522711.977519903] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522711.977982128] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522711.978408175] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522711.979269627] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522711.979712876] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522711.980148340] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522711.980631244] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.027744967] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.028329340] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.028760226] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.029651253] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.030181645] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522712.030641465] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.031258820] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.078529747] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.079043428] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.079506264] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.080335395] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.080769828] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522712.081300912] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.081789305] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.128647800] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.129132437] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.129568132] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.129996273] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.130482723] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522712.131603079] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.132168497] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.178526496] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.179074591] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.179530264] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.179956912] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.180461897] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522712.180899345] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.182729209] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.229113336] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.229569389] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.229986750] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.230400524] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.230803498] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522712.231210740] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.231735652] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.279172279] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.279613905] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.280012521] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.280482119] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.280923405] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522712.281352828] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.281942722] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.329168344] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.329609059] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.330011612] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.330463247] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.330942083] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522712.331351438] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.331853488] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.379867495] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.380374243] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.380788408] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.381257235] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.381659096] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522712.382194127] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.382770195] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.430244242] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.430665811] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.431225918] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.431752283] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.432254863] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522712.432643160] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.433096949] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.480094224] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.481094856] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.481716188] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.482298167] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.482733401] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522712.483158546] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.483640558] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.530160971] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.530590214] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.531022152] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.532605795] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.533151125] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522712.533729607] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.534309743] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.580192472] [hils_motion]: → [0.0, -0.6, 0.6, 0.0, 0.6, 0.0] (0.65s @ 25%)[0m
+[0m[INFO] [1781522712.581535174] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.583683514] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.584339511] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.584825129] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.585210961] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522712.585613354] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.586082462] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.631594037] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.632106375] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.633048518] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.633556478] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.633986863] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522712.634426386] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.634918306] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.681905171] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.682415747] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.682852003] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.683715939] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.684223649] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522712.684630791] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.685087896] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.732019457] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.732466604] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.732856283] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.733310623] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.734160773] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522712.734559219] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.735003680] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.782329951] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.782853060] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.783261474] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.783656863] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.784653368] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522712.785074536] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.785546799] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.832576114] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.833221201] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.833682133] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.834275894] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.834749881] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522712.835711961] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.836210283] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.882714566] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.883207648] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.883710259] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.884310321] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.884730307] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522712.885180309] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.885922417] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.934093518] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.934692408] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.935177967] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.935612680] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.936604556] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522712.937212834] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.937658267] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522712.984166136] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522712.984746843] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522712.985359228] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522712.985830380] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522712.986318102] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522712.987177260] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522712.987635727] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.033644974] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.034134730] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.034605751] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.035022521] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.035460100] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522713.035867412] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.036400058] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.083889183] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.084451525] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.084893191] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.085307316] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.085700912] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522713.086110298] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.086578675] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.134118324] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.134538300] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.134989965] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.135391947] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.135772920] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522713.136177667] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.136627028] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.184721355] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.185217222] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.185619615] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.185997051] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.186408120] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522713.186785947] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.187234166] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.234329093] [hils_motion]: → [0.0, -0.6, 0.6, 0.0, -0.6, 0.0] (0.65s @ 25%)[0m
+[0m[INFO] [1781522713.235420445] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.236070131] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.236578191] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.237008927] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.237522327] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522713.237932355] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.238445855] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.286228089] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.286792034] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.287234461] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.287651241] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.288057722] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522713.288480142] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.288951303] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.336266232] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.336722366] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.337144586] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.337536729] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.337926228] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522713.338334161] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.338793050] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.386318793] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.387056764] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.387470638] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.387845109] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.388239326] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522713.388611703] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.389121927] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.436453157] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.437390020] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.437794096] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.438188433] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.438571099] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522713.438951691] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.439468358] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.486879257] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.487388509] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.488098918] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.488527330] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.488956984] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522713.489358625] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.489892564] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.537268557] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.537736783] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.538187837] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.538971604] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.539555135] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522713.540070189] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.540890704] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.587181447] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.587659732] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.588103221] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.588517757] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.588933475] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522713.590142757] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.590955968] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.637629748] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.638163146] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.638609180] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.639045386] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.639486953] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522713.640378911] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.641188957] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.687877915] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.688417544] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.688841507] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.689345360] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.689829406] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522713.690616498] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.691548312] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.738555455] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.739100735] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.739571205] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.740006099] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.740462533] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522713.741382133] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.742034313] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.788536241] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.788980222] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.789393776] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.789792171] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.790211876] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522713.790692285] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.791331701] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.838909362] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.839521206] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.839983221] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.840427642] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.840903222] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522713.841332195] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.842000825] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.888481764] [hils_motion]: → [0.0, -0.6, 0.6, 0.0, 0.6, 0.0] (0.65s @ 25%)[0m
+[0m[INFO] [1781522713.889572906] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.890161216] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.890596080] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.891034690] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.891435140] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522713.892037116] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.892689286] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.939774495] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.940336366] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.940785016] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.941221492] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.941628474] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522713.942051325] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.942599250] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522713.990799776] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522713.991426058] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522713.991970496] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522713.992844461] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522713.993500368] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522713.993907660] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522713.994938569] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522714.040912449] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522714.041558207] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522714.042254159] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522714.042734758] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522714.043184179] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522714.043623070] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522714.044157150] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522714.091190933] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522714.091711837] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522714.092245476] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522714.092682804] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522714.093093703] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522714.093507417] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522714.093975562] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522714.141330456] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522714.141853445] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522714.142299770] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522714.142706150] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522714.143154038] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522714.143581748] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522714.144124013] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522714.191253505] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522714.192185388] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522714.192629639] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522714.193073560] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522714.193509445] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522714.193940702] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522714.194452419] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522714.241635522] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522714.242122713] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522714.243077349] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522714.243555554] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522714.243972965] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522714.244393953] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522714.244890121] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522714.291928192] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522714.292554113] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522714.292984077] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522714.294364680] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522714.294911042] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522714.295378367] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522714.295857734] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522714.342485447] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522714.343017392] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522714.343567331] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522714.344705340] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522714.345234570] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522714.345627746] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522714.346088277] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522714.392652763] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522714.393293571] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522714.393818614] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522714.394705353] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522714.395150756] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522714.395568327] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522714.396041933] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522714.442890790] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522714.443473300] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522714.444080676] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522714.444563219] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522714.445491466] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522714.445909778] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522714.446565926] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522714.493499422] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522714.494013694] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522714.494458235] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522714.494861750] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522714.495297305] [piper_ctrl_single_node]: joint5: 0.6[0m
+[0m[INFO] [1781522714.496045906] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522714.496513230] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522714.543005600] [hils_motion]: → [0.0, -0.6, 0.6, 0.0, -0.6, 0.0] (0.65s @ 25%)[0m
+[0m[INFO] [1781522714.543864768] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522714.544341269] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522714.544755514] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522714.545183925] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522714.545585647] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522714.545982249] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522714.546866293] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522714.594123845] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522714.594606668] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522714.595040991] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522714.595492726] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522714.595956032] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522714.596436451] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522714.597368104] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522714.644992723] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522714.645592164] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522714.646011629] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522714.646456631] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522714.646902526] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522714.647924498] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522714.648529389] [piper_ctrl_single_node]: vel_all: 25[0m
+[0m[INFO] [1781522714.695205473] [piper_ctrl_single_node]: joint1: 0.0[0m
+[0m[INFO] [1781522714.695661817] [piper_ctrl_single_node]: joint2: -0.6[0m
+[0m[INFO] [1781522714.696072606] [piper_ctrl_single_node]: joint3: 0.6[0m
+[0m[INFO] [1781522714.696489816] [piper_ctrl_single_node]: joint4: 0.0[0m
+[0m[INFO] [1781522714.696896226] [piper_ctrl_single_node]: joint5: -0.6[0m
+[0m[INFO] [1781522714.697334657] [piper_ctrl_single_node]: joint6: 0.0[0m
+[0m[INFO] [1781522714.697827128] [piper_ctrl_single_node]: vel_all: 25[0m
+^CException in thread Thread-1 (spin):
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/threading.py", line 1016, in _bootstrap_inner
+[robot_state_publisher-3] [INFO] [1781522714.719637702] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[gazebo-2] [1;33m[Wrn] [Event.cc:61] [0m[1;33mWarning: Deleting a connection right after creation. [0m[1;33mMake sure to save the ConnectionPtr from a Connect call
+    self.run()
+[0m[INFO] [1781522714.720965126] [hils_motion]: 모션 종료[0m
+Failed to publish log message to rosout: publisher's context is invalid, at ./src/rcl/publisher.c:389
+[joint8_ctrl.py-1] Traceback (most recent call last):
+[joint8_ctrl.py-1]   File "/root/ros2_ws/install/piper_gazebo/lib/piper_gazebo/joint8_ctrl.py", line 62, in main
+  File "/usr/lib/python3.10/threading.py", line 953, in run
+Traceback (most recent call last):
+  File "/pc_bridge/motions/wave.py", line 38, in <module>
+[joint8_ctrl.py-1]     rclpy.spin(node)
+[joint8_ctrl.py-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[joint8_ctrl.py-1]     executor.spin_once()
+[joint8_ctrl.py-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+[joint8_ctrl.py-1]     self._spin_once_impl(timeout_sec)
+    self._target(*self._args, **self._kwargs)
+[joint8_ctrl.py-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 797, in _spin_once_impl
+[joint8_ctrl.py-1]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[joint8_ctrl.py-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 780, in wait_for_ready_callbacks
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+    motion_main(POSES, speed=SPEED, loop=LOOP)
+[joint8_ctrl.py-1]     return next(self._cb_iter)
+  File "/pc_bridge/motions/lib.py", line 62, in motion_main
+    rclpy.shutdown()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+    executor.spin_once()
+Traceback (most recent call last):
+  File "/root/ros2_ws/build/piper/piper/piper_ctrl_single_node.py", line 446, in main
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+[joint8_ctrl.py-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 681, in _wait_for_ready_callbacks
+    _shutdown(context=context)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+[joint8_ctrl.py-1]     raise ExternalShutdownException()
+[joint8_ctrl.py-1] rclpy.executors.ExternalShutdownException
+[joint8_ctrl.py-1] 
+[joint8_ctrl.py-1] During handling of the above exception, another exception occurred:
+[joint8_ctrl.py-1] 
+    self._spin_once_impl(timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 797, in _spin_once_impl
+[joint8_ctrl.py-1] Traceback (most recent call last):
+[joint8_ctrl.py-1]   File "/root/ros2_ws/install/piper_gazebo/lib/piper_gazebo/joint8_ctrl.py", line 70, in <module>
+    return context.shutdown()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+[joint8_ctrl.py-1]     main()
+    handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[joint8_ctrl.py-1]   File "/root/ros2_ws/install/piper_gazebo/lib/piper_gazebo/joint8_ctrl.py", line 67, in main
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 780, in wait_for_ready_callbacks
+[joint8_ctrl.py-1]     rclpy.shutdown()
+Traceback (most recent call last):
+  File "/pc_bridge/vrobot/virtual_robot.py", line 121, in <module>
+[joint8_ctrl.py-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+    self.__context.shutdown()
+[joint8_ctrl.py-1]     _shutdown(context=context)
+rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+[joint8_ctrl.py-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+[joint8_ctrl.py-1]     return context.shutdown()
+[joint8_ctrl.py-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+[joint8_ctrl.py-1]     self.__context.shutdown()
+[joint8_ctrl.py-1] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+    main()
+  File "/pc_bridge/vrobot/virtual_robot.py", line 113, in main
+    robot.run()
+  File "/pc_bridge/vrobot/virtual_robot.py", line 76, in run
+    rclpy.spin(piper_single_node)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+    self.backend.spin_once(dt)
+  File "/pc_bridge/vrobot/backend_gazebo.py", line 60, in spin_once
+    executor.spin_once()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+    self._rclpy.spin_once(self.node, timeout_sec=0.0)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 208, in spin_once
+    executor.spin_once(timeout_sec=timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+    self._spin_once_impl(timeout_sec)
+    self._spin_once_impl(timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 797, in _spin_once_impl
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 797, in _spin_once_impl
+    handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 780, in wait_for_ready_callbacks
+    handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 780, in wait_for_ready_callbacks
+    return next(self._cb_iter)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 653, in _wait_for_ready_callbacks
+    return next(self._cb_iter)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 681, in _wait_for_ready_callbacks
+    wait_set = _rclpy.WaitSet(
+rclpy._rclpy_pybind11.RCLError: failed to initialize wait set: the given context is not valid, either rcl_init() was not called or rcl_shutdown() was called., at ./src/rcl/wait.c:130
+    raise ExternalShutdownException()
+rclpy.executors.ExternalShutdownException
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/root/ros2_ws/install/piper/lib/piper/piper_single_ctrl", line 33, in <module>
+    sys.exit(load_entry_point('piper', 'console_scripts', 'piper_single_ctrl')())
+  File "/root/ros2_ws/build/piper/piper/piper_ctrl_single_node.py", line 451, in main
+    rclpy.shutdown()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+    _shutdown(context=context)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+    return context.shutdown()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+    self.__context.shutdown()
+rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+[INFO] [robot_state_publisher-3]: process has finished cleanly [pid 60]
+[hils] cleanup
+=== 모션 끝 ===
+[hils] cleanup

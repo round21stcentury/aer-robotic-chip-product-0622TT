@@ -1,0 +1,227 @@
+--------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2021-2023 Ondrej Ille
+-- Copyright (C) 2023-     Logic Design Services Ltd.s
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to use, copy, modify, merge, publish, distribute the Component for
+-- non-commercial purposes. Using the Component for commercial purposes is
+-- forbidden unless previously agreed with Copyright holder.
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+-- -------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2015-2020 MIT License
+--
+-- Authors:
+--     Ondrej Ille <ondrej.ille@gmail.com>
+--     Martin Jerabek <martin.jerabek01@gmail.com>
+--
+-- Project advisors:
+-- 	Jiri Novak <jnovak@fel.cvut.cz>
+-- 	Pavel Pisa <pisa@cmp.felk.cvut.cz>
+--
+-- Department of Measurement         (http://meas.fel.cvut.cz/)
+-- Faculty of Electrical Engineering (http://www.fel.cvut.cz)
+-- Czech Technical University        (http://www.cvut.cz/)
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to deal in the Component without restriction, including without limitation
+-- the rights to use, copy, modify, merge, publish, distribute, sublicense,
+-- and/or sell copies of the Component, and to permit persons to whom the
+-- Component is furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- @TestInfoStart
+--
+-- @Purpose:
+--  BTR (Bit timing register) feature test.
+--
+-- @Verifies:
+--  @1. BTR register properly configures PROP, PH1, PH2 registers.
+--  @2. Transmission/reception at random bit-rate.
+--
+-- @Test sequence:
+--  @1. Disable both Nodes. Generate random bit-rate and configure it sa Nominal
+--      bit-rate! Enable both nodes and wait till both nodes are on.
+--  @2. Wait until sample point in DUT and measure number of clock cycles
+--      till next sample point. Check that it corresponds to pre-computed value!
+--  @3. Send frame by DUT and wait until it is sent. Read frame from Test node
+--      and check they are matching.
+--
+-- @TestInfoEnd
+--------------------------------------------------------------------------------
+-- Revision History:
+--   11.11.2019   Created file
+--------------------------------------------------------------------------------
+
+Library ctu_can_fd_tb;
+context ctu_can_fd_tb.ieee_context;
+context ctu_can_fd_tb.rtl_context;
+context ctu_can_fd_tb.tb_common_context;
+
+use ctu_can_fd_tb.feature_test_agent_pkg.all;
+use ctu_can_fd_tb.clk_gen_agent_pkg.all;
+
+package btr_ftest is
+    procedure btr_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    );
+end package;
+
+
+package body btr_ftest is
+
+
+    procedure btr_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    ) is
+        variable can_frame_1        :       t_ctu_frame;
+        variable can_frame_2        :       t_ctu_frame;
+        variable frame_sent         :       boolean := false;
+        
+        variable bus_timing         :       t_ctu_bit_time_cfg;
+
+        variable clock_per_bit      :       natural := 0;
+
+        variable clock_meas         :       natural := 0;
+        variable frames_equal       :       boolean;
+        
+        variable tx_delay           :       time;
+        
+        variable t_meas_start       :       time;
+        variable t_meas_stop        :       time;
+        variable clk_sys_period     :       time;
+    begin
+
+        -----------------------------------------------------------------------
+        -- @1. Disable both Nodes. Generate random bit-rate and configure it sa 
+        --     Nominal bit-rate! Enable both nodes and wait till both nodes are 
+        --     on.
+        -----------------------------------------------------------------------
+        info_m("Step 1");
+
+        ctu_turn(false, DUT_NODE, chn);
+        ctu_turn(false, TEST_NODE, chn);
+
+        generate_rand_bit_time_cfg(bus_timing, chn);
+        
+        -----------------------------------------------------------------------
+        -- Configure delay of TX -> RX so that for any generated bit-rate, it
+        -- is not too high! Otherwise, roundtrip will be too high and Node will
+        -- not manage to receive ACK in time!
+        -- Before sample point, whole roundtrip must be made (and 2 more clock
+        -- cycles due to input delay!). Lets take the delay as one third of
+        -- TSEG1. Roundtrip will take two thirds and we should be safe!
+        -----------------------------------------------------------------------
+        tx_delay := (((1 + bus_timing.prop_nbt + bus_timing.ph1_nbt) *
+                       bus_timing.tq_nbt) / 3) * 10 ns;
+        info_m("TX delay is: " & time'image(tx_delay));
+        set_transceiver_delay(tx_delay, DUT_NODE, chn);
+        set_transceiver_delay(tx_delay, TEST_NODE, chn);
+
+        -- Pre-calculate expected number of clock cycles after all corrections!
+        clock_per_bit := (1 + bus_timing.prop_nbt + bus_timing.ph1_nbt +
+                          bus_timing.ph2_nbt) * bus_timing.tq_nbt;
+
+        ctu_set_bit_time_cfg(bus_timing, DUT_NODE, chn);
+        ctu_set_bit_time_cfg(bus_timing, TEST_NODE, chn);
+
+        ctu_turn(true, DUT_NODE, chn);
+        ctu_turn(true, TEST_NODE, chn);
+
+        ctu_wait_err_active(DUT_NODE, chn);
+        ctu_wait_err_active(TEST_NODE, chn);
+
+        info_m("CAN bus nominal bit-rate:");
+        info_m("PROP: " & integer'image(bus_timing.prop_nbt));
+        info_m("PH1: " & integer'image(bus_timing.ph1_nbt));
+        info_m("PH2: " & integer'image(bus_timing.ph2_nbt));
+        info_m("SJW: " & integer'image(bus_timing.sjw_nbt));
+
+        -----------------------------------------------------------------------
+        -- @2. Wait until sample point in DUT and measure number of clock
+        --     cycles till next sample point. Check that it corresponds to
+        --     pre-computed value!
+        -----------------------------------------------------------------------
+        info_m("Step 2");
+
+        ctu_wait_sample_point(DUT_NODE, chn, false);
+        t_meas_start := now;
+        ctu_wait_sample_point(DUT_NODE, chn, false);
+        t_meas_stop := now;
+
+        clk_agent_get_period(chn, clk_sys_period);
+
+        clock_meas := ((t_meas_stop - t_meas_start) / clk_sys_period);
+
+        check_m(clock_per_bit = clock_meas,
+            " Expected clock per bit: " & integer'image(clock_per_bit) &
+            " Measured clock per bit: " & integer'image(clock_meas));
+
+        -----------------------------------------------------------------------
+        -- @3. Send frame by DUT and wait until it is sent. Read frame from
+        --     Test node and check they are matching.
+        -----------------------------------------------------------------------
+        info_m("Step 3");
+        
+        -- Shorten length of generated frame to max 4 data bytes! The thing is
+        -- that if generated bit rate is too low, and data field length too
+        -- high, test run time explodes! It has no sense to test long data fields
+        -- on any bit-rate since its functionality should not depend on it!
+        generate_can_frame(can_frame_1);
+        info_m("Generated frame");
+        can_frame_1.frame_format := NORMAL_CAN;
+
+        if (can_frame_1.data_length > 4) then
+            can_frame_1.data_length := 4;
+            length_to_dlc(can_frame_1.data_length, can_frame_1.dlc);
+            dlc_to_rwcnt(can_frame_1.dlc, can_frame_1.rwcnt);
+        end if;
+
+        -- Force frame type to CAN 2.0 since we are measuring nominal bit rate!
+        ctu_send_frame(can_frame_1, 1, DUT_NODE, chn, frame_sent);
+        ctu_wait_frame_sent(TEST_NODE, chn);
+        ctu_read_frame(can_frame_2, TEST_NODE, chn);
+
+        compare_can_frames(can_frame_1, can_frame_2, false, frames_equal);
+        check_m(frames_equal, "TX/RX frame equal!");
+
+  end procedure;
+
+end package body;

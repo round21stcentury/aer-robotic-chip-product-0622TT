@@ -1,0 +1,284 @@
+--------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2021-2023 Ondrej Ille
+-- Copyright (C) 2023-     Logic Design Services Ltd.s
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to use, copy, modify, merge, publish, distribute the Component for
+-- non-commercial purposes. Using the Component for commercial purposes is
+-- forbidden unless previously agreed with Copyright holder.
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+-- -------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2015-2020 MIT License
+--
+-- Authors:
+--     Ondrej Ille <ondrej.ille@gmail.com>
+--     Martin Jerabek <martin.jerabek01@gmail.com>
+--
+-- Project advisors:
+-- 	Jiri Novak <jnovak@fel.cvut.cz>
+-- 	Pavel Pisa <pisa@cmp.felk.cvut.cz>
+--
+-- Department of Measurement         (http://meas.fel.cvut.cz/)
+-- Faculty of Electrical Engineering (http://www.fel.cvut.cz)
+-- Czech Technical University        (http://www.cvut.cz/)
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to deal in the Component without restriction, including without limitation
+-- the rights to use, copy, modify, merge, publish, distribute, sublicense,
+-- and/or sell copies of the Component, and to permit persons to whom the
+-- Component is furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- @TestInfoStart
+--
+-- @Purpose:
+--  TXT Buffer backup mode feature test
+--
+-- @Verifies:
+--  @1. When MODE[TBBM] = 1 and transmission from "original" TXT Buffer is
+--      successfull, "backup" TXT Buffer moves to "aborted".
+--  @2. When MODE[TBBM] = 1, commands applied to a Backup buffer still control
+--      the backup buffer.
+--
+-- @Test sequence:
+--  @1. Set TXT Buffer backup mode in DUT.
+--
+--  @2. Loop for each TXT Buffer:
+--      @2.1 Generate random priorities of TXT Buffers and apply them in DUT.
+--           Choose the "original" TXT Buffer corresponding to the currently
+--           iterated TXT Buffer, and insert random frame to it.
+--      @2.2 Send set ready command to selected original TXT Buffer. Wait until
+--           DUT starts transmission, and check that "original" TXT Buffer is in
+--           TX in Progress and "backup" TXT Buffer is in "ready" state.
+--      @2.3 Wait until transmission ends and bus is idle. Check that "original"
+--           TXT Buffer is in "TX OK" state and "backup" TXT buffer ended in
+--           "Aborted" state.
+--      @2.4 Insert the same frame into the Backup Buffer. Issue Set_Ready
+--           to the backup buffer.
+--      @2.5 Wait until transmission starts, and check the Backup Buffer is in
+--           "TX in progress" and original buffer is (still) in "TX OK" state.
+--      @2.6 Wait until transmission is over. Check the original TXT Buffer is
+--           still in TX OK and Backup Buffer is also in TX OK.
+--
+-- @TestInfoEnd
+--------------------------------------------------------------------------------
+-- Revision History:
+--    29.06.2021   Created file
+--------------------------------------------------------------------------------
+
+Library ctu_can_fd_tb;
+context ctu_can_fd_tb.ieee_context;
+context ctu_can_fd_tb.rtl_context;
+context ctu_can_fd_tb.tb_common_context;
+
+use ctu_can_fd_tb.feature_test_agent_pkg.all;
+
+package mode_txbbm_ftest is
+    procedure mode_txbbm_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    );
+end package;
+
+
+package body mode_txbbm_ftest is
+    procedure mode_txbbm_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    ) is
+        variable can_tx_frame       :       t_ctu_frame;
+        variable can_rx_frame       :       t_ctu_frame;
+        variable frame_sent         :       boolean := false;
+        variable frames_equal       :       boolean := false;
+        variable mode_1             :       t_ctu_mode := t_ctu_mode_rst_val;
+
+        variable err_counters       :       t_ctu_err_ctrs := (0, 0, 0, 0);
+        variable err_counters_2     :       t_ctu_err_ctrs := (0, 0, 0, 0);
+
+        variable fault_th           :       t_ctu_fault_thresholds;
+        variable fault_th_2         :       t_ctu_fault_thresholds;
+
+        variable txt_buf_count      :       natural;
+        variable tmp_int            :       natural;
+        variable txt_buf_index      :       natural;
+
+        variable status_1           :       t_ctu_status;
+
+        variable txt_buf_vector     :       std_logic_vector(7 downto 0) := x"00";
+        variable txt_buf_state      :       t_ctu_txt_buff_state;
+        variable num_buffers        :       natural;
+    begin
+
+        -----------------------------------------------------------------------
+        -- @1. Set TXT Buffer backup mode in DUT. Generate random priorities of
+        --     TXT Buffers and apply them in DUT. Choose the "original"
+        --     TXT Buffer corresponding to the currently iterated TXT Buffer,
+        --     and insert random frame to it.
+        -----------------------------------------------------------------------
+        info_m("Step 1");
+
+        mode_1.tx_buf_backup := true;
+        mode_1.parity_check := true;
+        ctu_set_mode(mode_1, DUT_NODE, chn);
+
+        ctu_get_txt_buf_cnt(txt_buf_count, DUT_NODE, chn);
+
+        -----------------------------------------------------------------------
+        --  @2. Loop for each TXT Buffer
+        -----------------------------------------------------------------------
+        ctu_get_txt_buf_cnt(num_buffers, DUT_NODE, chn);
+
+        for iteration in 1 to num_buffers loop
+            info_m("Step 2, iteration" & integer'image(iteration));
+
+            -------------------------------------------------------------------
+            -- @2.1 Generate random priorities of TXT Buffers and apply them
+            --      in DUT. Generate random index of TXT Buffer which is for
+            --      sure "original" TXT Buffer and insert random frame to it.
+            --      Configure random priorities.
+            -------------------------------------------------------------------
+            info_m("Step 2.1");
+
+            for i in 1 to txt_buf_count loop
+                rand_int_v(7, tmp_int);
+                ctu_set_txt_buf_prio(i, tmp_int, DUT_NODE, chn);
+            end loop;
+
+            txt_buf_index := iteration;
+            if (txt_buf_index mod 2 = 0) then
+                txt_buf_index := txt_buf_index - 1;
+            end if;
+
+            generate_can_frame(can_tx_frame);
+            ctu_put_tx_frame(can_tx_frame, txt_buf_index, DUT_NODE, chn);
+
+            -----------------------------------------------------------------------
+            -- @2.2 Send set ready command to selected original TXT Buffer. Wait
+            --      until DUT starts transmission, and check that "original" TXT
+            --      Buffer is in TX in Progress and "backup" TXT Buffer is in
+            --      "ready" state.
+            -----------------------------------------------------------------------
+            info_m("Step 2.2");
+
+            txt_buf_vector := x"00";
+            txt_buf_vector(txt_buf_index - 1) := '1';
+
+            ctu_give_txt_cmd(buf_set_ready, txt_buf_vector, DUT_NODE, chn);
+
+            ctu_wait_frame_start(true, false, DUT_NODE, chn);
+
+            ctu_get_txt_buf_state(txt_buf_index, txt_buf_state, DUT_NODE, chn);
+            check_m(txt_buf_state = buf_tx_progress, "'Original' TXT Buffer is in 'TX in Progress'");
+            ctu_get_txt_buf_state(txt_buf_index + 1, txt_buf_state, DUT_NODE, chn);
+            check_m(txt_buf_state = buf_ready, "'Backup' TXT Buffer is in 'TX Ready'");
+
+            -----------------------------------------------------------------------
+            -- @2.3 Wait until transmission ends and bus is idle. Check that
+            --      "original" TXT Buffer is in "TX OK" state and "backup" TXT
+            --      buffer ended in "Aborted" state.
+            -----------------------------------------------------------------------
+            info_m("Step 2.3");
+
+            ctu_wait_frame_sent(DUT_NODE, chn);
+            ctu_wait_bus_idle(TEST_NODE, chn);
+            ctu_wait_bus_idle(DUT_NODE, chn);
+
+            ctu_get_txt_buf_state(txt_buf_index, txt_buf_state, DUT_NODE, chn);
+            check_m(txt_buf_state = buf_done, "'Original' TXT Buffer is in 'TX OK'");
+            ctu_get_txt_buf_state(txt_buf_index + 1, txt_buf_state, DUT_NODE, chn);
+            check_m(txt_buf_state = buf_aborted, "'Backup' TXT Buffer is in 'Aborted'");
+
+            ctu_read_frame(can_rx_frame, TEST_NODE, chn);
+            compare_can_frames(can_rx_frame, can_tx_frame, false, frames_equal);
+            check_m(frames_equal, "TX/RX frames match");
+
+            ctu_get_status(status_1, DUT_NODE, chn);
+            check_false_m(status_1.tx_parity_error, "Parity error not set!");
+            check_false_m(status_1.tx_double_parity_error, "Double parity error not set!");
+
+            -----------------------------------------------------------------------
+            -- @2.4 Insert the same frame into the Backup Buffer. Issue Set_Ready
+            --      to the backup buffer.
+            -----------------------------------------------------------------------
+            info_m("Step 2.4");
+
+            ctu_put_tx_frame(can_tx_frame, txt_buf_index + 1, DUT_NODE, chn);
+
+            txt_buf_vector := x"00";
+            txt_buf_vector(txt_buf_index) := '1';
+
+            ctu_give_txt_cmd(buf_set_ready, txt_buf_vector, DUT_NODE, chn);
+
+            -----------------------------------------------------------------------
+            -- @2.5 Wait until transmission starts, and check the Backup Buffer is
+            --      in "TX in progress" and original buffer is (still) in "TX OK"
+            --      state.
+            -----------------------------------------------------------------------
+            info_m("Step 2.5");
+
+            ctu_wait_frame_start(true, false, DUT_NODE, chn);
+
+            ctu_get_txt_buf_state(txt_buf_index, txt_buf_state, DUT_NODE, chn);
+            check_m(txt_buf_state = buf_done, "'Original' TXT Buffer is still in 'TX OK'");
+            ctu_get_txt_buf_state(txt_buf_index + 1, txt_buf_state, DUT_NODE, chn);
+            check_m(txt_buf_state = buf_tx_progress, "'Backup' TXT Buffer is in 'TX in progress'");
+
+            -----------------------------------------------------------------------
+            -- @2.6 Wait until transmission is over. Check the original TXT Buffer
+            --      is still in TX OK and Backup Buffer is also in TX OK.
+            -----------------------------------------------------------------------
+            info_m("Step 2.6");
+
+            ctu_wait_bus_idle(TEST_NODE, chn);
+            ctu_wait_bus_idle(DUT_NODE, chn);
+
+            ctu_read_frame(can_rx_frame, TEST_NODE, chn);
+            compare_can_frames(can_rx_frame, can_tx_frame, false, frames_equal);
+            check_m(frames_equal, "TX/RX frames match");
+
+            ctu_get_txt_buf_state(txt_buf_index, txt_buf_state, DUT_NODE, chn);
+            check_m(txt_buf_state = buf_done, "'Original' TXT Buffer is still in 'TX OK'");
+            ctu_get_txt_buf_state(txt_buf_index + 1, txt_buf_state, DUT_NODE, chn);
+            check_m(txt_buf_state = buf_done, "'Backup' TXT Buffer is in 'TX OK'");
+
+        end loop;
+
+  end procedure;
+
+end package body;

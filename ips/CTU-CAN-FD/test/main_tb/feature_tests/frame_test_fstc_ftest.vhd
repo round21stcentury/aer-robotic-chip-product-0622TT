@@ -1,0 +1,236 @@
+--------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2021-2023 Ondrej Ille
+-- Copyright (C) 2023-     Logic Design Services Ltd.s
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to use, copy, modify, merge, publish, distribute the Component for
+-- non-commercial purposes. Using the Component for commercial purposes is
+-- forbidden unless previously agreed with Copyright holder.
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+-- -------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2015-2020 MIT License
+--
+-- Authors:
+--     Ondrej Ille <ondrej.ille@gmail.com>
+--     Martin Jerabek <martin.jerabek01@gmail.com>
+--
+-- Project advisors:
+-- 	Jiri Novak <jnovak@fel.cvut.cz>
+-- 	Pavel Pisa <pisa@cmp.felk.cvut.cz>
+--
+-- Department of Measurement         (http://meas.fel.cvut.cz/)
+-- Faculty of Electrical Engineering (http://www.fel.cvut.cz)
+-- Czech Technical University        (http://www.cvut.cz/)
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to deal in the Component without restriction, including without limitation
+-- the rights to use, copy, modify, merge, publish, distribute, sublicense,
+-- and/or sell copies of the Component, and to permit persons to whom the
+-- Component is furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- @TestInfoStart
+--
+-- @Purpose:
+--  FRAME_TEST_W[FSTC] feature test
+--
+-- @Verifies:
+--  @1. When MODE[TSTM] = 1, FRAME_TEST_W[FSTC] CTU CAN FD flips stuff count bit
+--      at position of FRAME_TEST_W[TPRM].
+--
+-- @Test sequence:
+--  @1. Set Test mode in DUT. Iterate through all TXT Buffers:
+--      @1.1. Generate random CAN FD frame. Transmit it by DUT, record
+--            transmitted value of stuff count ignoring stuff bits.
+--      @1.2. Send again the same frame as in previous point, only flip random
+--            bit of Stuff count, again record the stuff count. Check that
+--            transmitted stuff count has correct bit flipped.
+--      @1.3. Wait until error frame is transmitted (frame is corrupted, TEST_NODE
+--            should transmit error frame). Check that TEST_NODE detects CRC error.
+--            Wait until frame is transmitted.
+--
+-- @TestInfoEnd
+--------------------------------------------------------------------------------
+-- Revision History:
+--    12.07.2021   Created file
+--------------------------------------------------------------------------------
+
+Library ctu_can_fd_tb;
+context ctu_can_fd_tb.ieee_context;
+context ctu_can_fd_tb.rtl_context;
+context ctu_can_fd_tb.tb_common_context;
+
+use ctu_can_fd_tb.feature_test_agent_pkg.all;
+
+package frame_test_fstc_ftest is
+    procedure frame_test_fstc_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    );
+end package;
+
+
+package body frame_test_fstc_ftest is
+    procedure frame_test_fstc_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    ) is
+        variable can_tx_frame       :       t_ctu_frame;
+        variable can_rx_frame       :       t_ctu_frame;
+        variable frame_sent         :       boolean := false;
+        variable frames_equal       :       boolean := false;
+        variable mode_1             :       t_ctu_mode := t_ctu_mode_rst_val;
+
+        variable err_counters       :       t_ctu_err_ctrs := (0, 0, 0, 0);
+        variable err_counters_2     :       t_ctu_err_ctrs := (0, 0, 0, 0);
+
+        variable fault_th           :       t_ctu_fault_thresholds;
+        variable fault_th_2         :       t_ctu_fault_thresholds;
+
+        variable txt_buf_count      :       natural;
+        variable tmp_int            :       natural;
+
+        variable status_1           :       t_ctu_status;
+
+        variable txt_buf_vector     :       std_logic_vector(7 downto 0) := x"00";
+        variable txt_buf_state      :       t_ctu_txt_buff_state;
+
+        variable bit_to_flip        :       natural;
+        variable golden_stc         :       std_logic_vector(3 downto 0) := "0000";
+        variable expected_stc       :       std_logic_vector(3 downto 0) := "0000";
+        variable real_stc           :       std_logic_vector(3 downto 0) := "0000";
+
+        variable err_capt           :       t_ctu_err_capt;
+    begin
+
+        -----------------------------------------------------------------------
+        -- @1. Set Test mode in DUT. Iterate through all TXT Buffers
+        -----------------------------------------------------------------------
+        info_m("Step 1");
+
+        mode_1.test := true;
+        -- Self test mode is needed so that DUT will not send Error frame after
+        -- not getting ACK due to flipped bit. This-way we can check that test-node
+        -- has detected CRC error!
+        mode_1.self_test := true;
+        ctu_set_mode(mode_1, DUT_NODE, chn);
+
+        ctu_get_txt_buf_cnt(txt_buf_count, DUT_NODE, chn);
+
+        for txt_buf_index in 1 to txt_buf_count loop
+
+            info_m("Using TXT Buffer:" & integer'image(txt_buf_index));
+
+            -----------------------------------------------------------------------
+            -- @1.1. Generate random CAN FD frame. Transmit it by DUT, record
+            --       transmitted value of stuff count ignoring stuff bits.
+            -----------------------------------------------------------------------
+            info_m("Step 1.1");
+
+            generate_can_frame(can_tx_frame);
+            can_tx_frame.frame_format := FD_CAN;
+
+            ctu_put_tx_frame(can_tx_frame, txt_buf_index, DUT_NODE, chn);
+            ctu_give_txt_cmd(buf_set_ready, txt_buf_index, DUT_NODE, chn);
+
+            ctu_wait_ff(ff_stuff_count, DUT_NODE, chn);
+
+            for i in 0 to 3 loop
+                ctu_wait_sample_point(DUT_NODE, chn);
+                get_can_tx(DUT_NODE, golden_stc(i), chn);
+            end loop;
+
+            info_m("Original stuff count value is: 0x" & to_string(golden_stc));
+
+            ctu_wait_bus_idle(DUT_NODE, chn);
+
+            -----------------------------------------------------------------------
+            -- @1.2 Send again the same frame as in previous point, only flip
+            --      random bit of Stuff count, again record the stuff count.
+            --      Check that transmitted stuff count has correct bit flipped.
+            -----------------------------------------------------------------------
+            info_m("Step 1.2");
+
+            ctu_put_tx_frame(can_tx_frame, txt_buf_index, DUT_NODE, chn);
+
+            rand_int_v(3, bit_to_flip);
+            ctu_set_tx_frame_test(txt_buf_index, bit_to_flip, true, false, false,
+                                DUT_NODE, chn);
+
+            ctu_give_txt_cmd(buf_set_ready, txt_buf_index, DUT_NODE, chn);
+
+            ctu_wait_ff(ff_stuff_count, DUT_NODE, chn);
+
+            for i in 0 to 3 loop
+                ctu_wait_sample_point(DUT_NODE, chn);
+                get_can_tx(DUT_NODE, real_stc(i), chn);
+            end loop;
+
+            -- Calculate expected stuff count
+            expected_stc := golden_stc;
+            expected_stc(bit_to_flip) := not expected_stc(bit_to_flip);
+
+            info_m("Golden stuff count: " & to_string(golden_stc));
+            info_m("Expected stuff count: " & to_string(expected_stc));
+            info_m("Real stuff count: " & to_string(real_stc));
+            check_m(expected_stc = real_stc, "Expected Stuff count = Real stuff count");
+
+            -----------------------------------------------------------------------
+            -- @1.3 Wait until error frame is transmitted (frame is corrupted,
+            --      TEST_NODE should transmit error frame). Check that TEST_NODE
+            --      detects Form error. Wait until frame is transmitted.
+            -----------------------------------------------------------------------
+            info_m("Step 1.3");
+
+            ctu_wait_err_frame(TEST_NODE, chn);
+            wait for 20 ns;
+
+            ctu_get_err_capt(err_capt, TEST_NODE, chn);
+
+            check_m(err_capt.err_pos = err_pos_ack, "Error in ACK field");
+            check_m(err_capt.err_type = can_err_crc, "CRC error detected");
+
+            ctu_wait_bus_idle(DUT_NODE, chn);
+            ctu_wait_bus_idle(TEST_NODE, chn);
+
+        end loop;
+
+  end procedure;
+
+end package body;

@@ -1,0 +1,4 @@
+/vunit_out
+/wave_files
+test*.xml
+callgrind.out.*

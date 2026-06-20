@@ -1,0 +1,180 @@
+--------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2021-2023 Ondrej Ille
+-- Copyright (C) 2023-     Logic Design Services Ltd.s
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to use, copy, modify, merge, publish, distribute the Component for
+-- non-commercial purposes. Using the Component for commercial purposes is
+-- forbidden unless previously agreed with Copyright holder.
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+-- -------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2015-2020 MIT License
+--
+-- Authors:
+--     Ondrej Ille <ondrej.ille@gmail.com>
+--     Martin Jerabek <martin.jerabek01@gmail.com>
+--
+-- Project advisors:
+-- 	Jiri Novak <jnovak@fel.cvut.cz>
+-- 	Pavel Pisa <pisa@cmp.felk.cvut.cz>
+--
+-- Department of Measurement         (http://meas.fel.cvut.cz/)
+-- Faculty of Electrical Engineering (http://www.fel.cvut.cz)
+-- Czech Technical University        (http://www.cvut.cz/)
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to deal in the Component without restriction, including without limitation
+-- the rights to use, copy, modify, merge, publish, distribute, sublicense,
+-- and/or sell copies of the Component, and to permit persons to whom the
+-- Component is furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- @TestInfoStart
+--
+-- @Purpose:
+--  TXT Buffer Set Abort - SW command (TX_COMMAND) feature test.
+--
+-- @Verifies:
+--  @1. Set Abort command moves TXT Buffer from Ready to Aborted and from
+--      TX in progress to Aborted.
+--
+-- @Test sequence:
+--  @1. Generate frame and insert it for transmission to random TXT Buffer.
+--      Wait until sample point. Issue Set Ready command and check TXT Buffer
+--      becomes Ready. Issue Set Abort command and check TXT Buffer becomes
+--      Aborted. Bit time should be sufficiently long so that there is enough
+--      time to issue two commands and read buffer state ones before next sample
+--      point arrives.
+--  @2. Issue Set Ready command and wait until transmission starts. Check that
+--      TXT Buffer is in TX in progress. Issue Set Abort and check that TXT
+--      Buffer moves to Abort in progress. Wait until transmission is over.
+--      Wait until transmission is over and check TXT Buffer is aborted.
+--
+-- @TestInfoEnd
+--------------------------------------------------------------------------------
+-- Revision History:
+--   17.11.2019   Created file
+--------------------------------------------------------------------------------
+
+Library ctu_can_fd_tb;
+context ctu_can_fd_tb.ieee_context;
+context ctu_can_fd_tb.rtl_context;
+context ctu_can_fd_tb.tb_common_context;
+
+use ctu_can_fd_tb.feature_test_agent_pkg.all;
+
+package tx_cmd_set_abort_ftest is
+    procedure tx_cmd_set_abort_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    );
+end package;
+
+
+package body tx_cmd_set_abort_ftest is
+    procedure tx_cmd_set_abort_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    ) is
+        variable can_frame          :       t_ctu_frame;
+        variable txt_state          :       t_ctu_txt_buff_state;
+        variable num_buffers        :       natural;
+    begin
+
+        ctu_get_txt_buf_cnt(num_buffers, DUT_NODE, chn);
+
+        for buf_nr in 1 to num_buffers loop
+
+            info_m("Testing with TXT Buffer: " & integer'image(buf_nr));
+
+            -----------------------------------------------------------------------
+            -- @1. Generate frame and insert it for transmission to random TXT Buffer.
+            --    Wait until sample point. Issue Set Ready command and check TXT
+            --    Buffer becomes Ready. Issue Set Abort command and check TXT Buffer
+            --    becomes Aborted. Bit time should be sufficiently long so that there
+            --    is enough time to issue two commands and read buffer state ones
+            --    before next sample point arrives.
+            -----------------------------------------------------------------------
+            info_m("Step 1");
+
+            generate_can_frame(can_frame);
+            ctu_put_tx_frame(can_frame, buf_nr, DUT_NODE, chn);
+
+            ctu_wait_sample_point(DUT_NODE, chn);
+            ctu_give_txt_cmd(buf_set_ready, buf_nr, DUT_NODE, chn);
+            wait for 11 ns; -- This command is pipelined, delay must be inserted!
+            ctu_get_txt_buf_state(buf_nr, txt_state, DUT_NODE, chn);
+            check_m(txt_state = buf_ready, "TXT Buffer ready!");
+
+            ctu_give_txt_cmd(buf_set_abort, buf_nr, DUT_NODE, chn);
+            wait for 11 ns; -- This command is pipelined, delay must be inserted!
+            ctu_get_txt_buf_state(buf_nr, txt_state, DUT_NODE, chn);
+            check_m(txt_state = buf_aborted, "Set Abort: Ready -> Aborted");
+
+            -----------------------------------------------------------------------
+            -- @2. Issue Set Ready command and wait until transmission starts. Check
+            --    that TXT Buffer is in TX in progress. Issue Set Abort and check
+            --    that TXT Buffer moves to Abort in progress. Wait until
+            --    transmission is over and check TXT Buffer is aborted.
+            -----------------------------------------------------------------------
+            info_m("Step 2");
+
+            ctu_give_txt_cmd(buf_set_ready, buf_nr, DUT_NODE, chn);
+            ctu_wait_frame_start(true, false, DUT_NODE, chn);
+            ctu_get_txt_buf_state(buf_nr, txt_state, DUT_NODE, chn);
+            check_m(txt_state = buf_tx_progress, "TXT Buffer TX in Progress");
+
+            ctu_give_txt_cmd(buf_set_abort, buf_nr, DUT_NODE, chn);
+            wait for 11 ns; -- This command is pipelined, delay must be inserted!
+            ctu_get_txt_buf_state(buf_nr, txt_state, DUT_NODE, chn);
+            check_m(txt_state = buf_ab_progress,
+                "Set Abort: TX in Progress -> Abort in Progress");
+
+            ctu_wait_frame_sent(DUT_NODE, chn);
+            ctu_wait_bus_idle(DUT_NODE, chn);
+
+            ctu_get_txt_buf_state(buf_nr, txt_state, DUT_NODE, chn);
+            check_m(txt_state = buf_done,
+                "Set Abort: Done after Abort in Progress with Succesfull transmission");
+
+        end loop;
+
+  end procedure;
+
+end package body;

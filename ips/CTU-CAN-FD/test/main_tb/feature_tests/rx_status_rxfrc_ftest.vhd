@@ -1,0 +1,204 @@
+--------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2021-2023 Ondrej Ille
+-- Copyright (C) 2023-     Logic Design Services Ltd.s
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to use, copy, modify, merge, publish, distribute the Component for
+-- non-commercial purposes. Using the Component for commercial purposes is
+-- forbidden unless previously agreed with Copyright holder.
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+-- -------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2015-2020 MIT License
+--
+-- Authors:
+--     Ondrej Ille <ondrej.ille@gmail.com>
+--     Martin Jerabek <martin.jerabek01@gmail.com>
+--
+-- Project advisors:
+-- 	Jiri Novak <jnovak@fel.cvut.cz>
+-- 	Pavel Pisa <pisa@cmp.felk.cvut.cz>
+--
+-- Department of Measurement         (http://meas.fel.cvut.cz/)
+-- Faculty of Electrical Engineering (http://www.fel.cvut.cz)
+-- Czech Technical University        (http://www.cvut.cz/)
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to deal in the Component without restriction, including without limitation
+-- the rights to use, copy, modify, merge, publish, distribute, sublicense,
+-- and/or sell copies of the Component, and to permit persons to whom the
+-- Component is furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- @TestInfoStart
+--
+-- @Purpose:
+--  RX Buffer status (RX Frame count) feature test implementation.
+--
+-- @Test sequence:
+--   @1. RX Buffer size is read and buffer is cleared.
+--   @2. Free memory, buffer status and message count is checked.
+--   @3. Send minimal sized frame, and check that with each frame sent,
+--       RX Buffer frame count is incremented by 1.
+--   @4. Read-out each frame and check that with each frame read-out RX Buffer
+--       frame count is decremented by 1.
+--
+-- @TestInfoEnd
+--------------------------------------------------------------------------------
+-- Revision History:
+--
+--    12.12.2023  Created file
+--------------------------------------------------------------------------------
+
+Library ctu_can_fd_tb;
+context ctu_can_fd_tb.ieee_context;
+context ctu_can_fd_tb.rtl_context;
+context ctu_can_fd_tb.tb_common_context;
+
+use ctu_can_fd_tb.feature_test_agent_pkg.all;
+
+package rx_status_rxfrc_ftest is
+    procedure rx_status_rxfrc_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    );
+end package;
+
+
+package body rx_status_rxfrc_ftest is
+    procedure rx_status_rxfrc_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    ) is
+        variable can_frame          :       t_ctu_frame;
+        variable RX_can_frame       :       t_ctu_frame;
+        variable send_more          :       boolean := true;
+        variable in_RX_buf          :       natural;
+        variable frame_sent         :       boolean := false;
+        variable number_frms_sent   :       natural;
+
+        variable buf_info           :       t_ctu_rx_buf_state;
+        variable command            :       t_ctu_command := t_ctu_command_rst_val;
+        variable status             :       t_ctu_status;
+        variable frame_counter      :       natural;
+
+        variable big_rx_buffer      :       boolean;
+        variable frames_match       :       boolean;
+    begin
+
+        ------------------------------------------------------------------------
+        -- @1. RX Buffer size is read and buffer is cleared.
+        ------------------------------------------------------------------------
+        info_m("Step 1");
+
+        command.release_rec_buffer := true;
+        ctu_give_cmd(command, DUT_NODE, chn);
+        command.release_rec_buffer := false;
+
+        ctu_get_rx_buf_state(buf_info, DUT_NODE, chn);
+
+        ------------------------------------------------------------------------
+        -- @2. Free memory, buffer status and message count is checked.
+        ------------------------------------------------------------------------
+        info_m("Step 2");
+
+        check_m(buf_info.rx_empty,
+              "RX Buffer is not empty after Release receive Buffer command");
+
+        check_m(buf_info.rx_buff_size = buf_info.rx_mem_free,
+             "Number of free words in RX Buffer after Release Receive " &
+             "Buffer command is not equal to buffer size");
+
+        check_m(buf_info.rx_frame_count = 0 and
+                buf_info.rx_write_pointer = 0 and
+                buf_info.rx_read_pointer = 0,
+                "RX Buffer pointers are not 0 after Release Receieve Buffer command");
+
+        ------------------------------------------------------------------------
+        -- @3. Send minimal sized frame, and check that with each frame sent,
+        --     RX Buffer frame count is incremented by 1.
+        ------------------------------------------------------------------------
+        info_m("Step 3");
+
+        generate_can_frame(can_frame);
+
+        -- Use fixed identifier that achieves Parity bit flip ->
+        -- To maximimize toggle coverage!
+        can_frame.identifier := 3;
+        can_frame.ident_type := BASE;
+        can_frame.frame_format := NORMAL_CAN;
+        can_frame.rtr := RTR_FRAME;
+        -- No data bytes is minimal frame size to get the highest possible frame
+        -- count in RX Buffer!
+        can_frame.data_length := 0;
+        length_to_dlc(can_frame.data_length, can_frame.dlc);
+        dlc_to_rwcnt(can_frame.dlc, can_frame.rwcnt);
+
+        for i in 1 to buf_info.rx_buff_size/4 loop
+            info_m("Sending frame nr: " & integer'image(i));
+            ctu_send_frame(can_frame, 1, TEST_NODE, chn, frame_sent);
+            ctu_wait_frame_sent(DUT_NODE, chn);
+
+            ctu_get_rx_buf_state(buf_info, DUT_NODE, chn);
+
+            check_m(buf_info.rx_frame_count = i,
+                    "RX Buffer frame count incremented");
+        end loop;
+
+        ------------------------------------------------------------------------
+        -- @4. Read-out each frame and check that with each frame read-out RX
+        --     Buffer frame count is decremented by 1.
+        ------------------------------------------------------------------------
+        info_m("Step 4");
+
+        for i in 1 to buf_info.rx_buff_size/4 loop
+            info_m("Reading frame nr: " & integer'image(i));
+            ctu_read_frame(RX_can_frame, DUT_NODE, chn);
+            compare_can_frames(can_frame, RX_can_frame, false, frames_match);
+
+            check_m(frames_match, "Frame at position: " & integer'image(i) & " matches");
+
+            ctu_get_rx_buf_state(buf_info, DUT_NODE, chn);
+
+            check_m(buf_info.rx_frame_count = buf_info.rx_buff_size/4 - i,
+                    "RX Buffer frame count decremented");
+        end loop;
+
+    end procedure;
+
+end package body;

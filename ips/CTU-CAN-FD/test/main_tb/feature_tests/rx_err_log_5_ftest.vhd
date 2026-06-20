@@ -1,0 +1,191 @@
+--------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2021-2023 Ondrej Ille
+-- Copyright (C) 2023-     Logic Design Services Ltd.s
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to use, copy, modify, merge, publish, distribute the Component for
+-- non-commercial purposes. Using the Component for commercial purposes is
+-- forbidden unless previously agreed with Copyright holder.
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+-- -------------------------------------------------------------------------------
+--
+-- CTU CAN FD IP Core
+-- Copyright (C) 2015-2020 MIT License
+--
+-- Authors:
+--     Ondrej Ille <ondrej.ille@gmail.com>
+--     Martin Jerabek <martin.jerabek01@gmail.com>
+--
+-- Project advisors:
+-- 	Jiri Novak <jnovak@fel.cvut.cz>
+-- 	Pavel Pisa <pisa@cmp.felk.cvut.cz>
+--
+-- Department of Measurement         (http://meas.fel.cvut.cz/)
+-- Faculty of Electrical Engineering (http://www.fel.cvut.cz)
+-- Czech Technical University        (http://www.cvut.cz/)
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this VHDL component and associated documentation files (the "Component"),
+-- to deal in the Component without restriction, including without limitation
+-- the rights to use, copy, modify, merge, publish, distribute, sublicense,
+-- and/or sell copies of the Component, and to permit persons to whom the
+-- Component is furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Component.
+--
+-- THE COMPONENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHTHOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-- FROM, OUT OF OR IN CONNECTION WITH THE COMPONENT OR THE USE OR OTHER DEALINGS
+-- IN THE COMPONENT.
+--
+-- The CAN protocol is developed by Robert Bosch GmbH and protected by patents.
+-- Anybody who wants to implement this IP core on silicon has to obtain a CAN
+-- protocol license from Bosch.
+--
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- @TestInfoStart
+--
+-- @Purpose:
+--  RX Error logging feature test 5
+--
+-- @Verifies:
+--  @1. RX Error being logged with following ERF_TYPE values:
+--      @1.1 ERC_PRT_ERR
+--
+-- @Test sequence:
+--  @1. Configure DUT to MODE[ERFM] = 1 and enable Test mode and Parity in DUT
+--      Node.
+--  @2. Generate CAN frame, and insert it to DUTs TXT Buffer. Use Test Registers
+--      to flip a bit in the TXT Buffer word containing first 4 bytes of CAN
+--      Data field.
+--  @3. Give DUTs TXT Buffer a "Set Ready" Command. Wait until Error frame
+--      occurs in DUT Node. Check DUTs RX Buffer has a single frame in its RX
+--      Buffer. Wait until bus is idle. Read the frame, and check it is an
+--      Error frame and it has ERF_TYPE = ERC_PRT_ERR.
+--
+-- @TestInfoEnd
+--------------------------------------------------------------------------------
+-- Revision History:
+--    24.8.2024   Created file
+--------------------------------------------------------------------------------
+
+Library ctu_can_fd_tb;
+context ctu_can_fd_tb.ieee_context;
+context ctu_can_fd_tb.rtl_context;
+context ctu_can_fd_tb.tb_common_context;
+
+use ctu_can_fd_tb.feature_test_agent_pkg.all;
+
+package rx_err_log_5_ftest is
+    procedure rx_err_log_5_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    );
+end package;
+
+
+package body rx_err_log_5_ftest is
+
+    procedure rx_err_log_5_ftest_exec(
+        signal      chn             : inout  t_com_channel
+    ) is
+        variable mode_1             : t_ctu_mode := t_ctu_mode_rst_val;
+        variable can_frame          : t_ctu_frame;
+        variable err_frame          : t_ctu_frame;
+        variable corrupt_bit_index  : integer;
+        variable rx_buf_state       : t_ctu_rx_buf_state;
+        variable r_data             : std_logic_vector(31 downto 0);
+        variable hw_cfg             : t_ctu_hw_cfg;
+    begin
+
+        -- Read HW config
+        ctu_get_hw_config(hw_cfg, DUT_NODE, chn);
+        if (hw_cfg.sup_parity = false or hw_cfg.sup_test_registers = false) then
+            info_m("Skipping the test since sup_parity=false or sup_test_registers=false");
+            return;
+        end if;
+
+        -------------------------------------------------------------------------------------------
+        --  @1. Configure DUT to MODE[ERFM] = 1, enable Test mode and Parity in DUT Node.
+        -------------------------------------------------------------------------------------------
+        info_m("Step 1");
+
+        mode_1.error_logging := true;
+        mode_1.test := true;
+        mode_1.parity_check := true;
+        ctu_set_mode(mode_1, DUT_NODE, chn);
+
+        -------------------------------------------------------------------------------------------
+        -- @2. Generate CAN frame, and insert it to DUTs TXT Buffer. Use Test Registers
+        --     to flip a bit in the TXT Buffer word containing first 4 bytes of CAN Data field.
+        -------------------------------------------------------------------------------------------
+        info_m("Step 2");
+
+        generate_can_frame(can_frame);
+        can_frame.data_length := 8;
+        can_frame.rtr := NO_RTR_FRAME;
+        length_to_dlc(can_frame.data_length, can_frame.dlc);
+
+        ctu_put_tx_frame(can_frame, 1, DUT_NODE, chn);
+
+        -- Enable test access
+        ctu_set_tst_mem_access(true, DUT_NODE, chn);
+
+        -- Read, flip, and write back
+        rand_int_v(31, corrupt_bit_index);
+        ctu_read_tst_mem(r_data, 5, txt_buf_to_test_mem_tgt(1), DUT_NODE, chn);
+        r_data(corrupt_bit_index) := not r_data(corrupt_bit_index);
+        ctu_write_tst_mem(r_data, 5, txt_buf_to_test_mem_tgt(1), DUT_NODE, chn);
+
+        -- Disable test mem access
+        ctu_set_tst_mem_access(false, DUT_NODE, chn);
+
+        -------------------------------------------------------------------------------------------
+        -- @3. Give DUTs TXT Buffer a "Set Ready" Command. Wait until Error frame occurs in DUT
+        --     Node. Check DUTs RX Buffer has a single frame in its RX Buffer. Wait until bus is
+        --     idle. Read the frame, and check it is an Error frame and it has
+        --     ERF_TYPE = ERC_PRT_ERR.
+        -------------------------------------------------------------------------------------------
+        info_m("Step 3");
+
+        ctu_give_txt_cmd(buf_set_ready, 1, DUT_NODE, chn);
+        ctu_wait_err_frame(DUT_NODE, chn);
+
+        wait for 100 ns;
+
+        ctu_get_rx_buf_state(rx_buf_state, DUT_NODE, chn);
+        check_m(rx_buf_state.rx_frame_count = 1, "Single Error frame in RX Buffer!");
+
+        ctu_read_frame(err_frame, DUT_NODE, chn);
+        check_m(err_frame.erf = '1', "FRAME_FORMAT_W[ERF] = 1");
+        check_m(err_frame.erf_type = ERC_PRT_ERR, "FRAME_FORMAT_W[ERF_TYPE] = ERC_PRT_ERR");
+        check_m(err_frame.ivld = '1', "FRAME_FORMAT_W[IVLD] = 1");
+
+        ctu_wait_bus_idle(DUT_NODE, chn);
+
+    end procedure;
+
+end package body;

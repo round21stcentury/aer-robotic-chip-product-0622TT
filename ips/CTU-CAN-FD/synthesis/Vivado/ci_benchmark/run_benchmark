@@ -1,0 +1,10 @@
+#!/bin/bash
+
+echo "Running small configuration..."
+vivado -mode tcl -source vivado_benchmark_small.tcl
+
+echo "Running medium configuration..."
+vivado -mode tcl -source vivado_benchmark_medium.tcl
+
+echo "Running big configuration..."
+vivado -mode tcl -source vivado_benchmark_big.tcl
